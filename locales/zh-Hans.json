@@ -118,5 +118,21 @@
   "noticeModeSwitched": "已切换到 {mode} · {rate} Hz",
   "noticeSwitchFailed": "切换失败：显示器没有响应",
   "noticeSwitching": "显示器正在切换到 {mode}，屏幕会黑几秒",
-  "noticeLoginFailed": "登录项设置失败：{error}"
+  "noticeLoginFailed": "登录项设置失败：{error}",
+  "modeDesktop": "桌面空间",
+  "modePanel": "面板 {width, number, ::group-off}×{height, number, ::group-off}",
+  "modeScalingNote": "桌面数值越大，文字和窗口越小。HiDPI 先以 2× 渲染，再适配面板。",
+  "hiDPIRecommended": "推荐 HiDPI",
+  "hiDPISpace": "推荐 · 更多桌面空间",
+  "hiDPIComfort": "较大文字 · 阅读舒适",
+  "hiDPINearNative": "备选尺寸",
+  "hiDPINotAvailable": "系统尚未提供",
+  "hiDPIInstall": "添加缺失档位…",
+  "hiDPIInstallNote": "需管理员授权，添加后重新连接显示器或重启。同型号显示器共用此配置。",
+  "hiDPIRestore": "恢复原显示器配置…",
+  "hiDPIAuthorizing": "正在等待管理员授权…",
+  "hiDPIInstalled": "档位已添加。重新连接显示器或重启后，选择系统提供的 HiDPI 档位。",
+  "hiDPIRestored": "已恢复原配置，重新连接显示器或重启后生效。",
+  "hiDPIConfigFailed": "配置未完成或授权已取消，请重试。",
+  "noticeModeApplying": "正在切换分辨率…"
 }

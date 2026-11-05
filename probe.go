@@ -8,6 +8,20 @@ import (
 	"github.com/binaryify/MonitorBar/internal/mitv"
 )
 
+func probeModes() {
+	m := display.Target()
+	current, _ := m.CurrentMode()
+	w, h := m.NativeSize(m.Modes(), current)
+	fmt.Printf("显示器: %s  面板: %d × %d\n", m.Name, w, h)
+	if m.PhysicalWidthMM > 0 {
+		fmt.Printf("物理尺寸: %d × %d mm\n", m.PhysicalWidthMM, m.PhysicalHeightMM)
+	}
+	fmt.Printf("当前桌面: %s  渲染: %d × %d  HiDPI: %v  %dHz\n", current.Title(), current.PixelWidth, current.PixelHeight, current.HiDPI(), current.RefreshRate)
+	for _, info := range m.ModeDiagnostics() {
+		fmt.Printf("%s  桌面 %s  渲染 %d × %d  HiDPI=%v  %dHz  usable=%v flags=0x%x\n", info.Source, info.Title(), info.PixelWidth, info.PixelHeight, info.HiDPI(), info.RefreshRate, info.Usable, info.Flags)
+	}
+}
+
 // probe prints what the app can see and control, without UI (--probe).
 func probe() {
 	m := display.Target()

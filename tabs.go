@@ -345,6 +345,9 @@ func (p *panel) modes(c *ui.Context) {
 	if s.hasCurrent {
 		rate = s.current.RefreshRate
 	}
+	if runtime.GOOS == "darwin" {
+		p.hidpi(c, rate)
+	}
 	if s.link != nil { // only the HyperOS remote can switch the monitor's own mode
 		card(c, func() {
 			trailing := ""
@@ -366,9 +369,9 @@ func (p *panel) modes(c *ui.Context) {
 	if rates := display.RefreshRates(s.modes, s.current); len(rates) > 1 {
 		card(c, func() {
 			cardTitle(c, locales.RefreshRate(), "gauge", s.current.Title())
-			ui.Grid(c).Columns(4).Gap(6).Children(func() {
+			ui.Grid(c).Columns(4).Gap(6).Disabled(s.switchingMode).Children(func() {
 				for _, m := range rates {
-					if chipText(c.Key(m.ID()), fmt.Sprintf("%d Hz", m.RefreshRate), m.RefreshRate == rate) {
+					if chipText(c.Key(m.ID()), fmt.Sprintf("%d Hz", m.RefreshRate), m.RefreshRate == rate) && !s.switchingMode {
 						s.applyMode(m)
 					}
 				}
@@ -377,6 +380,70 @@ func (p *panel) modes(c *ui.Context) {
 	}
 	p.resolutions(c, locales.ModesHiDPI(), "zoom", display.Resolutions(s.modes, true, rate))
 	p.resolutions(c, locales.ModesStandard(), "layers", display.Resolutions(s.modes, false, rate))
+}
+
+func (p *panel) hidpi(c *ui.Context, rate int) {
+	s := p.s
+	w, h := s.monitor.NativeSize(s.modes, s.current)
+	card(c.Key("scaling"), func() {
+		cardTitle(c, locales.ModeDesktop(), "display", s.current.Title())
+		ui.Text(c, locales.ModePanel(w, h)).FontSize(11).TextColor(muted)
+		if s.monitor.PhysicalWidthMM > 0 && s.monitor.PhysicalHeightMM > 0 {
+			diagonal := math.Hypot(float64(s.monitor.PhysicalWidthMM), float64(s.monitor.PhysicalHeightMM)) / 25.4
+			ppi := math.Hypot(float64(w), float64(h)) / diagonal
+			ui.Text(c, fmt.Sprintf("%.0f″ · %.0f PPI", diagonal, ppi)).FontSize(10).TextColor(muted)
+		}
+		if s.hasCurrent {
+			ui.Text(c, locales.ModeRendered(s.current.PixelWidth, s.current.PixelHeight)).FontSize(11).TextColor(muted)
+		}
+		ui.Text(c, locales.ModeScalingNote()).FontSize(10).TextColor(muted)
+	})
+	presets := display.RecommendedHiDPI(w, h)
+	if len(presets) == 0 || s.monitor.Builtin {
+		return
+	}
+	card(c.Key("recommended"), func() {
+		cardTitle(c, locales.HiDPIRecommended(), "sparkles", "")
+		labels := []string{locales.HiDPISpace(), locales.HiDPIComfort(), locales.HiDPINearNative()}
+		missing := false
+		for i, preset := range presets {
+			mode, available := preset.HiDPIMode(s.modes, rate)
+			missing = missing || !available
+			selected := available && s.hasCurrent && s.current.ID() == mode.ID() && s.current.PixelWidth == mode.PixelWidth
+			row := chip(c.Key(preset.Title()), selected).Disabled(!available || s.switchingMode).Height(56).PaddingX(10)
+			row.Children(func() {
+				ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Children(func() {
+					ui.Column(c).Grow(1).Gap(3).Children(func() {
+						ui.Text(c, preset.Title()).FontSize(12).FontWeight(600)
+						ui.Text(c, labels[i]).FontSize(10).TextColor(muted)
+					})
+					caption := locales.HiDPINotAvailable()
+					if available {
+						caption = fmt.Sprintf("HiDPI · %d Hz", mode.RefreshRate)
+					}
+					ui.Text(c, caption).FontSize(10).TextColor(muted)
+				})
+			})
+			if row.Clicked() && available && !s.switchingMode {
+				s.applyMode(mode)
+			}
+		}
+		if missing {
+			ui.Text(c, locales.HiDPIInstallNote()).FontSize(10).TextColor(muted)
+			ui.Column(c).Disabled(s.configuringHiDPI || s.switchingMode).Children(func() {
+				if chipText(c.Key("install-hidpi"), locales.HiDPIInstall(), false) {
+					s.configureHiDPI(false)
+				}
+			})
+		}
+		if s.hasHiDPIOverride {
+			ui.Column(c).Disabled(s.configuringHiDPI || s.switchingMode).Children(func() {
+				if chipText(c.Key("restore-hidpi"), locales.HiDPIRestore(), false) {
+					s.configureHiDPI(true)
+				}
+			})
+		}
+	})
 }
 
 func (p *panel) resolutions(c *ui.Context, title, iconName string, modes []display.Mode) {
@@ -389,7 +456,7 @@ func (p *panel) resolutions(c *ui.Context, title, iconName string, modes []displ
 		ui.Column(c).Gap(4).Children(func() {
 			for _, m := range modes {
 				selected := s.hasCurrent && m.SizeKey() == s.current.SizeKey()
-				row := ui.Row(c.Key(m.ID())).Height(28).PaddingX(9).Gap(8).Radius(8).Cursor(ui.CursorPointer)
+				row := ui.Row(c.Key(m.ID())).Disabled(s.switchingMode).Height(28).PaddingX(9).Gap(8).Radius(8).Cursor(ui.CursorPointer)
 				if selected {
 					row.Background(accent.Alpha(0.14))
 				} else if row.Hovered() {
@@ -410,7 +477,7 @@ func (p *panel) resolutions(c *ui.Context, title, iconName string, modes []displ
 						check.Opacity(0)
 					}
 				})
-				if row.Clicked() {
+				if row.Clicked() && !s.switchingMode {
 					s.applyMode(m)
 				}
 			}

@@ -70,11 +70,24 @@ MonitorBar 只在 REDMI 显示器 G Pro 27U 2026 上测试过，不保证在你�
 ```bash
 MonitorBar --show                 # 启动并打开面板（程序已运行时，再次启动也会打开面板）
 MonitorBar --probe                # 打印显示器、接口、分辨率、DDC/CI 读数和局域网发现结果
+MonitorBar --probe-modes          # 只读诊断：桌面/渲染/面板尺寸，完整模式及可用状态
 MonitorBar --open-at-login on     # 开机自启（off 关闭）
 MonitorBar --update               # 检查并安装新版本
 ```
 
 ## 工作原理
+
+### macOS HiDPI
+
+「分辨率」页分别显示桌面空间、渲染尺寸和面板像素。桌面数值越大，文字与窗口越小；例如 2560×1440 HiDPI 使用 5120×2880 渲染，然后适配显示器的实际像素。它不会增加面板的物理像素。
+
+16:9 的 QHD 及更高分辨率外屏会提供 2560×1440、2304×1296、2496×1404 三个推荐入口。MonitorBar 同时读取 CoreGraphics 与可用的私有 CGS 接口，优先使用系统已有模式，并在切换后核验实际尺寸和刷新率。M4 Mac mini 连接 H27D9 的 DisplayPort 实测可直接使用 2560×1440 HiDPI、5120×2880 渲染、100Hz。
+
+灰色档位表示系统尚未提供该模式。点击「添加缺失档位…」并完成 macOS 管理员授权后，重新连接显示器或重启，再查看可用档位。该操作在 `/Library/Displays/Contents/Resources/Overrides` 添加 `scale-resolutions`，同型号显示器共用配置；保留原有字段与模式，不修改 EDID、连接时序或刷新率上限。系统仍可能拒绝某些尺寸。
+
+「恢复原显示器配置…」恢复添加前的原始文件；如果其他软件随后修改过该文件，MonitorBar 会拒绝覆盖，并保留备份。这里使用原生显示模式与型号配置；虚拟屏镜像尚未实现。API、格式与限制的来源见 [HiDPI 后端调查](docs/hidpi-backend.md)。
+
+### 显示器控制通道
 
 MonitorBar 有三条控制显示器的通道，启动时在后台探测，哪条可用就用哪条：
 

@@ -3,7 +3,9 @@
 package display
 
 import (
+	"encoding/binary"
 	"errors"
+	"fmt"
 	"os/exec"
 	"sync"
 	"unsafe"
@@ -16,8 +18,10 @@ import (
 const SettingsURL = "x-apple.systempreferences:com.apple.Displays-Settings.extension"
 
 type (
-	handle     = uint32  // CGDirectDisplayID
-	nativeMode = uintptr // CGDisplayModeRef, retained
+	handle     = uint32 // CGDirectDisplayID
+	nativeMode struct {
+		cgsID int32
+	}
 )
 
 var (
@@ -33,9 +37,11 @@ var (
 	cgDisplayModeGetPixelHeight        func(mode uintptr) uintptr
 	cgDisplayModeGetRefreshRate        func(mode uintptr) float64
 	cgDisplayModeIsUsableForDesktopGUI func(mode uintptr) bool
+	cgDisplayModeGetIOFlags            func(mode uintptr) uint32
 	cgBeginDisplayConfiguration        func(config *uintptr) int32
 	cgConfigureDisplayWithDisplayMode  func(config uintptr, id uint32, mode uintptr, options uintptr) int32
 	cgCompleteDisplayConfiguration     func(config uintptr, option uint32) int32
+	cgCancelDisplayConfiguration       func(config uintptr) int32
 	cgDisplayGammaTableCapacity        func(id uint32) uint32
 	cgGetDisplayTransferByTable        func(id, capacity uint32, r, g, b *float32, count *uint32) int32
 	cgSetDisplayTransferByTable        func(id, size uint32, r, g, b *float32) int32
@@ -47,7 +53,6 @@ var (
 
 	cfArrayGetCount           func(array uintptr) int
 	cfArrayGetValueAtIndex    func(array uintptr, i int) uintptr
-	cfRetain                  func(ref uintptr) uintptr
 	cfRelease                 func(ref uintptr)
 	cfDictionaryCreate        func(alloc uintptr, keys, values *uintptr, n int, keyCallbacks, valueCallbacks uintptr) uintptr
 	cfDictionaryGetValue      func(dict, key uintptr) uintptr
@@ -56,6 +61,9 @@ var (
 	cfGetTypeID               func(ref uintptr) uintptr
 	cfStringGetTypeID         func() uintptr
 	cfNumberGetValue          func(number uintptr, kind int32, value unsafe.Pointer) bool
+	cfDataGetLength           func(uintptr) int
+	cfDataGetBytePtr          func(uintptr) *byte
+	cfDataGetTypeID           func() uintptr
 
 	ioServiceMatching               func(name string) uintptr
 	ioServiceGetMatchingServices    func(port uint32, matching uintptr, iter *uint32) int32
@@ -97,9 +105,11 @@ func load() {
 			&cgDisplayModeGetWidth: "CGDisplayModeGetWidth", &cgDisplayModeGetHeight: "CGDisplayModeGetHeight",
 			&cgDisplayModeGetPixelWidth: "CGDisplayModeGetPixelWidth", &cgDisplayModeGetPixelHeight: "CGDisplayModeGetPixelHeight",
 			&cgDisplayModeGetRefreshRate: "CGDisplayModeGetRefreshRate", &cgDisplayModeIsUsableForDesktopGUI: "CGDisplayModeIsUsableForDesktopGUI",
+			&cgDisplayModeGetIOFlags:     "CGDisplayModeGetIOFlags",
 			&cgBeginDisplayConfiguration: "CGBeginDisplayConfiguration", &cgConfigureDisplayWithDisplayMode: "CGConfigureDisplayWithDisplayMode",
 			&cgCompleteDisplayConfiguration: "CGCompleteDisplayConfiguration", &cgDisplayGammaTableCapacity: "CGDisplayGammaTableCapacity",
-			&cgGetDisplayTransferByTable: "CGGetDisplayTransferByTable", &cgSetDisplayTransferByTable: "CGSetDisplayTransferByTable",
+			&cgCancelDisplayConfiguration: "CGCancelDisplayConfiguration",
+			&cgGetDisplayTransferByTable:  "CGGetDisplayTransferByTable", &cgSetDisplayTransferByTable: "CGSetDisplayTransferByTable",
 			&cgDisplayRestoreColorSyncSettings: "CGDisplayRestoreColorSyncSettings", &cgEventSourceSecondsSinceLast: "CGEventSourceSecondsSinceLastEventType",
 			&cgDisplayVendorNumber: "CGDisplayVendorNumber", &cgDisplayModelNumber: "CGDisplayModelNumber",
 			&cgDisplaySerialNumber: "CGDisplaySerialNumber",
@@ -108,10 +118,11 @@ func load() {
 		}
 		for fn, name := range map[any]string{
 			&cfArrayGetCount: "CFArrayGetCount", &cfArrayGetValueAtIndex: "CFArrayGetValueAtIndex",
-			&cfRetain: "CFRetain", &cfRelease: "CFRelease", &cfDictionaryCreate: "CFDictionaryCreate",
+			&cfRelease: "CFRelease", &cfDictionaryCreate: "CFDictionaryCreate",
 			&cfDictionaryGetValue: "CFDictionaryGetValue", &cfStringCreateWithCString: "CFStringCreateWithCString",
 			&cfStringGetCString: "CFStringGetCString", &cfGetTypeID: "CFGetTypeID", &cfStringGetTypeID: "CFStringGetTypeID",
 			&cfNumberGetValue: "CFNumberGetValue",
+			&cfDataGetLength:  "CFDataGetLength", &cfDataGetBytePtr: "CFDataGetBytePtr", &cfDataGetTypeID: "CFDataGetTypeID",
 		} {
 			purego.RegisterLibFunc(fn, cf, name)
 		}
@@ -155,7 +166,41 @@ func Target() Monitor {
 			break
 		}
 	}
-	return Monitor{Name: screenName(id), Connection: connection(), Builtin: cgDisplayIsBuiltin(id) != 0, handle: id}
+	m := Monitor{Name: screenName(id), Connection: connection(), Builtin: cgDisplayIsBuiltin(id) != 0, handle: id}
+	m.NativeWidth, m.NativeHeight, m.PhysicalWidthMM, m.PhysicalHeightMM = panelDimensions(id)
+	return m
+}
+
+func panelDimensions(id uint32) (int, int, int, int) {
+	var iter uint32
+	if ioServiceGetMatchingServices(0, ioServiceMatching("IOPortTransportStateDisplayPort"), &iter) != 0 {
+		return 0, 0, 0, 0
+	}
+	defer ioObjectRelease(iter)
+	metadata := cfStringCreateWithCString(0, "Metadata", utf8Encoding)
+	defer cfRelease(metadata)
+	key := cfStringCreateWithCString(0, "EDID", utf8Encoding)
+	defer cfRelease(key)
+	for entry := ioIteratorNext(iter); entry != 0; entry = ioIteratorNext(iter) {
+		dict := ioRegistryEntryCreateCFProperty(entry, metadata, 0, 0)
+		ioObjectRelease(entry)
+		if dict == 0 {
+			continue
+		}
+		data := cfDictionaryGetValue(dict, key)
+		var w, h, mmW, mmH int
+		if data != 0 && cfGetTypeID(data) == cfDataGetTypeID() && cfDataGetLength(data) >= 128 {
+			edid := unsafe.Slice(cfDataGetBytePtr(data), cfDataGetLength(data))
+			if uint32(binary.BigEndian.Uint16(edid[8:10])) == cgDisplayVendorNumber(id) && uint32(binary.LittleEndian.Uint16(edid[10:12])) == cgDisplayModelNumber(id) {
+				w, h, mmW, mmH = edidDimensions(edid)
+			}
+		}
+		cfRelease(dict)
+		if w > 0 {
+			return w, h, mmW, mmH
+		}
+	}
+	return 0, 0, 0, 0
 }
 
 // screenName asks NSScreen for the display's localized name.
@@ -210,7 +255,12 @@ func (m Monitor) Modes() []Mode {
 	for i := range cfArrayGetCount(array) {
 		ref := cfArrayGetValueAtIndex(array, i)
 		if cgDisplayModeIsUsableForDesktopGUI(ref) {
-			modes = append(modes, newMode(cfRetain(ref)))
+			modes = append(modes, newMode(ref))
+		}
+	}
+	for _, info := range m.ModeDiagnostics() {
+		if info.Source == "CGS" && info.Usable && info.HiDPI() {
+			modes = append(modes, info.Mode)
 		}
 	}
 	return dedupe(modes)
@@ -219,6 +269,9 @@ func (m Monitor) Modes() []Mode {
 func (m Monitor) CurrentMode() (Mode, bool) {
 	load()
 	ref := cgDisplayCopyDisplayMode(m.handle)
+	if ref != 0 {
+		defer cfRelease(ref)
+	}
 	return newMode(ref), ref != 0
 }
 
@@ -233,17 +286,56 @@ func newMode(ref uintptr) Mode {
 	return Mode{
 		Width: int(cgDisplayModeGetWidth(ref)), Height: int(cgDisplayModeGetHeight(ref)),
 		PixelWidth: int(cgDisplayModeGetPixelWidth(ref)), PixelHeight: int(cgDisplayModeGetPixelHeight(ref)),
-		RefreshRate: rate, native: ref,
+		RefreshRate: rate,
 	}
 }
 
 func (m Monitor) Apply(mode Mode) error {
-	load()
+	loadCGS()
+	// Resolve again: display mode identifiers can change after a switch.
+	if cgsConfigureDisplayMode != nil {
+		for _, info := range m.ModeDiagnostics() {
+			if info.Source == "CGS" && info.Usable && info.ID() == mode.ID() && info.PixelWidth == mode.PixelWidth && info.PixelHeight == mode.PixelHeight {
+				var config uintptr
+				if code := cgBeginDisplayConfiguration(&config); code != 0 {
+					return fmt.Errorf("display: begin configuration: %d", code)
+				}
+				if code := cgsConfigureDisplayMode(config, m.handle, info.native.cgsID); code != 0 {
+					cancel := cgCancelDisplayConfiguration(config)
+					return fmt.Errorf("display: configure mode: %d (cancel: %d)", code, cancel)
+				}
+				if code := cgCompleteDisplayConfiguration(config, 2); code != 0 {
+					return fmt.Errorf("display: commit mode: %d", code)
+				}
+				return nil
+			}
+		}
+	}
+	array := cgDisplayCopyAllDisplayModes(m.handle, modeOptions)
+	if array == 0 {
+		return errors.New("display: no display modes")
+	}
+	defer cfRelease(array)
+	var ref uintptr
+	for i := range cfArrayGetCount(array) {
+		candidate := cfArrayGetValueAtIndex(array, i)
+		got := newMode(candidate)
+		if got.ID() == mode.ID() && got.PixelWidth == mode.PixelWidth && got.PixelHeight == mode.PixelHeight {
+			ref = candidate
+			break
+		}
+	}
+	if ref == 0 {
+		return errors.New("display: mode is no longer available")
+	}
 	var config uintptr
 	if cgBeginDisplayConfiguration(&config) != 0 {
 		return errors.New("display: cannot begin configuration")
 	}
-	cgConfigureDisplayWithDisplayMode(config, m.handle, mode.native, 0)
+	if code := cgConfigureDisplayWithDisplayMode(config, m.handle, ref, 0); code != 0 {
+		cancel := cgCancelDisplayConfiguration(config)
+		return fmt.Errorf("display: configure mode: %d (cancel: %d)", code, cancel)
+	}
 	if cgCompleteDisplayConfiguration(config, 2 /* kCGConfigurePermanently */) != 0 {
 		return errors.New("display: the display refused the mode")
 	}

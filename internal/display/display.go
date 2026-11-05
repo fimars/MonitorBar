@@ -19,16 +19,17 @@ type Monitor struct {
 	Name       string // e.g. "Mi Monitor"
 	Connection string // e.g. "HDMI", or "" when unknown
 	// Native is the panel's own resolution where the system tells it
-	// (Windows, from the EDID), zero otherwise.
-	NativeWidth, NativeHeight int
-	Builtin                   bool // a MacBook's own display, when no external one is on
-	handle                    handle
+	// (EDID or the Windows display path), zero otherwise.
+	NativeWidth, NativeHeight         int
+	PhysicalWidthMM, PhysicalHeightMM int
+	Builtin                           bool // a MacBook's own display, when no external one is on
+	handle                            handle
 }
 
 // NativeSize is the monitor's own resolution: what the system reports, or
 // the largest mode drawn 1:1, as HiDPI modes draw more pixels than the
-// panel has. A reported size smaller than the current mode is not trusted
-// (virtual displays of remote desktops report one): the current mode wins.
+// panel has. A physical EDID size is authoritative. Without physical size
+// information, a larger unscaled current mode wins (remote desktops).
 func (m Monitor) NativeSize(modes []Mode, current Mode) (w, h int) {
 	w, h = m.NativeWidth, m.NativeHeight
 	if w == 0 {
@@ -38,7 +39,7 @@ func (m Monitor) NativeSize(modes []Mode, current Mode) (w, h int) {
 			}
 		}
 	}
-	if !current.HiDPI() && current.PixelWidth > w {
+	if m.PhysicalWidthMM == 0 && !current.HiDPI() && current.PixelWidth > w {
 		w, h = current.PixelWidth, current.PixelHeight
 	}
 	return w, h
@@ -65,6 +66,14 @@ type Mode struct {
 	PixelWidth, PixelHeight int // the size drawn
 	RefreshRate             int
 	native                  nativeMode
+}
+
+// ModeInfo keeps the OS's availability verdict alongside its raw mode.
+type ModeInfo struct {
+	Mode
+	Usable bool
+	Source string
+	Flags  uint32
 }
 
 func (m Mode) HiDPI() bool { return m.PixelWidth > m.Width }

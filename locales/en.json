@@ -302,5 +302,31 @@
         "type": "String"
       }
     }
+  },
+  "modeDesktop": "Desktop size",
+  "modePanel": "Panel {width, number, ::group-off}×{height, number, ::group-off}",
+  "modeScalingNote": "Larger desktop dimensions make text and windows smaller. HiDPI renders at 2× before fitting the image to the panel.",
+  "hiDPIRecommended": "Recommended HiDPI",
+  "hiDPISpace": "Recommended · more desktop space",
+  "hiDPIComfort": "Larger text",
+  "hiDPINearNative": "Alternative size",
+  "hiDPINotAvailable": "Not available yet",
+  "hiDPIInstall": "Add missing sizes…",
+  "hiDPIInstallNote": "Needs administrator authorization, then reconnect or restart. Displays of this model share the configuration.",
+  "hiDPIRestore": "Restore original display configuration…",
+  "hiDPIAuthorizing": "Waiting for administrator authorization…",
+  "hiDPIInstalled": "Sizes added. Reconnect the display or restart, then choose an available HiDPI size.",
+  "hiDPIRestored": "Original configuration restored. Reconnect the display or restart to apply.",
+  "hiDPIConfigFailed": "Configuration was not completed or authorization was canceled. Try again.",
+  "noticeModeApplying": "Switching resolution…",
+  "@modePanel": {
+    "placeholders": {
+      "width": {
+        "type": "int"
+      },
+      "height": {
+        "type": "int"
+      }
+    }
   }
 }

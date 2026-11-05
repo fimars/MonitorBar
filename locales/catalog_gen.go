@@ -1238,3 +1238,163 @@ func NoticeLoginFailed(error string) string { return In(i18n.Locale()).NoticeLog
 func (msgs Messages) NoticeLoginFailed(error string) string {
 	return Catalog.Format(msgs.locale, "noticeLoginFailed", map[string]any{"error": error})
 }
+
+// ModeDesktop says "Desktop size"
+// in the language the app shows.
+func ModeDesktop() string { return In(i18n.Locale()).ModeDesktop() }
+
+// ModeDesktop says "Desktop size"
+// in the language of msgs.
+func (msgs Messages) ModeDesktop() string {
+	return Catalog.Format(msgs.locale, "modeDesktop", nil)
+}
+
+// ModePanel says "Panel {width, number, ::group-off}×{height, number, ::group-off}"
+// in the language the app shows.
+func ModePanel(width int, height int) string { return In(i18n.Locale()).ModePanel(width, height) }
+
+// ModePanel says "Panel {width, number, ::group-off}×{height, number, ::group-off}"
+// in the language of msgs.
+func (msgs Messages) ModePanel(width int, height int) string {
+	return Catalog.Format(msgs.locale, "modePanel", map[string]any{"width": width, "height": height})
+}
+
+// ModeScalingNote says "Larger desktop dimensions make text and windows smaller. HiDPI renders at 2× before fitting the image to the panel."
+// in the language the app shows.
+func ModeScalingNote() string { return In(i18n.Locale()).ModeScalingNote() }
+
+// ModeScalingNote says "Larger desktop dimensions make text and windows smaller. HiDPI renders at 2× before fitting the image to the panel."
+// in the language of msgs.
+func (msgs Messages) ModeScalingNote() string {
+	return Catalog.Format(msgs.locale, "modeScalingNote", nil)
+}
+
+// HiDPIRecommended says "Recommended HiDPI"
+// in the language the app shows.
+func HiDPIRecommended() string { return In(i18n.Locale()).HiDPIRecommended() }
+
+// HiDPIRecommended says "Recommended HiDPI"
+// in the language of msgs.
+func (msgs Messages) HiDPIRecommended() string {
+	return Catalog.Format(msgs.locale, "hiDPIRecommended", nil)
+}
+
+// HiDPISpace says "Recommended · more desktop space"
+// in the language the app shows.
+func HiDPISpace() string { return In(i18n.Locale()).HiDPISpace() }
+
+// HiDPISpace says "Recommended · more desktop space"
+// in the language of msgs.
+func (msgs Messages) HiDPISpace() string {
+	return Catalog.Format(msgs.locale, "hiDPISpace", nil)
+}
+
+// HiDPIComfort says "Larger text"
+// in the language the app shows.
+func HiDPIComfort() string { return In(i18n.Locale()).HiDPIComfort() }
+
+// HiDPIComfort says "Larger text"
+// in the language of msgs.
+func (msgs Messages) HiDPIComfort() string {
+	return Catalog.Format(msgs.locale, "hiDPIComfort", nil)
+}
+
+// HiDPINearNative says "Alternative size"
+// in the language the app shows.
+func HiDPINearNative() string { return In(i18n.Locale()).HiDPINearNative() }
+
+// HiDPINearNative says "Alternative size"
+// in the language of msgs.
+func (msgs Messages) HiDPINearNative() string {
+	return Catalog.Format(msgs.locale, "hiDPINearNative", nil)
+}
+
+// HiDPINotAvailable says "Not available yet"
+// in the language the app shows.
+func HiDPINotAvailable() string { return In(i18n.Locale()).HiDPINotAvailable() }
+
+// HiDPINotAvailable says "Not available yet"
+// in the language of msgs.
+func (msgs Messages) HiDPINotAvailable() string {
+	return Catalog.Format(msgs.locale, "hiDPINotAvailable", nil)
+}
+
+// HiDPIInstall says "Add missing sizes…"
+// in the language the app shows.
+func HiDPIInstall() string { return In(i18n.Locale()).HiDPIInstall() }
+
+// HiDPIInstall says "Add missing sizes…"
+// in the language of msgs.
+func (msgs Messages) HiDPIInstall() string {
+	return Catalog.Format(msgs.locale, "hiDPIInstall", nil)
+}
+
+// HiDPIInstallNote says "Needs administrator authorization, then reconnect or restart. Displays of this model share the configuration."
+// in the language the app shows.
+func HiDPIInstallNote() string { return In(i18n.Locale()).HiDPIInstallNote() }
+
+// HiDPIInstallNote says "Needs administrator authorization, then reconnect or restart. Displays of this model share the configuration."
+// in the language of msgs.
+func (msgs Messages) HiDPIInstallNote() string {
+	return Catalog.Format(msgs.locale, "hiDPIInstallNote", nil)
+}
+
+// HiDPIRestore says "Restore original display configuration…"
+// in the language the app shows.
+func HiDPIRestore() string { return In(i18n.Locale()).HiDPIRestore() }
+
+// HiDPIRestore says "Restore original display configuration…"
+// in the language of msgs.
+func (msgs Messages) HiDPIRestore() string {
+	return Catalog.Format(msgs.locale, "hiDPIRestore", nil)
+}
+
+// HiDPIAuthorizing says "Waiting for administrator authorization…"
+// in the language the app shows.
+func HiDPIAuthorizing() string { return In(i18n.Locale()).HiDPIAuthorizing() }
+
+// HiDPIAuthorizing says "Waiting for administrator authorization…"
+// in the language of msgs.
+func (msgs Messages) HiDPIAuthorizing() string {
+	return Catalog.Format(msgs.locale, "hiDPIAuthorizing", nil)
+}
+
+// HiDPIInstalled says "Sizes added. Reconnect the display or restart, then choose an available HiDPI size."
+// in the language the app shows.
+func HiDPIInstalled() string { return In(i18n.Locale()).HiDPIInstalled() }
+
+// HiDPIInstalled says "Sizes added. Reconnect the display or restart, then choose an available HiDPI size."
+// in the language of msgs.
+func (msgs Messages) HiDPIInstalled() string {
+	return Catalog.Format(msgs.locale, "hiDPIInstalled", nil)
+}
+
+// HiDPIRestored says "Original configuration restored. Reconnect the display or restart to apply."
+// in the language the app shows.
+func HiDPIRestored() string { return In(i18n.Locale()).HiDPIRestored() }
+
+// HiDPIRestored says "Original configuration restored. Reconnect the display or restart to apply."
+// in the language of msgs.
+func (msgs Messages) HiDPIRestored() string {
+	return Catalog.Format(msgs.locale, "hiDPIRestored", nil)
+}
+
+// HiDPIConfigFailed says "Configuration was not completed or authorization was canceled. Try again."
+// in the language the app shows.
+func HiDPIConfigFailed() string { return In(i18n.Locale()).HiDPIConfigFailed() }
+
+// HiDPIConfigFailed says "Configuration was not completed or authorization was canceled. Try again."
+// in the language of msgs.
+func (msgs Messages) HiDPIConfigFailed() string {
+	return Catalog.Format(msgs.locale, "hiDPIConfigFailed", nil)
+}
+
+// NoticeModeApplying says "Switching resolution…"
+// in the language the app shows.
+func NoticeModeApplying() string { return In(i18n.Locale()).NoticeModeApplying() }
+
+// NoticeModeApplying says "Switching resolution…"
+// in the language of msgs.
+func (msgs Messages) NoticeModeApplying() string {
+	return Catalog.Format(msgs.locale, "noticeModeApplying", nil)
+}

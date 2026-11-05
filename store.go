@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"log"
 	"math"
 	"path/filepath"
 	"slices"
@@ -55,11 +56,14 @@ type store struct {
 	redraw   func()                                 // asks the open panel for a new frame
 	setGamma func(brightness, warmth float64) error // the monitor's, replaced in tests
 
-	monitor     display.Monitor
-	modes       []display.Mode
-	current     display.Mode
-	hasCurrent  bool
-	switchingTo string // the mode the LAN remote is switching the monitor to
+	monitor          display.Monitor
+	modes            []display.Mode
+	current          display.Mode
+	hasCurrent       bool
+	switchingMode    bool
+	configuringHiDPI bool
+	hasHiDPIOverride bool
+	switchingTo      string // the mode the LAN remote is switching the monitor to
 
 	link      *mitv.Link // the display's LAN remote, nil until found
 	detecting bool
@@ -779,12 +783,57 @@ func (s *store) installUpdate() {
 // MARK: Display modes
 
 func (s *store) applyMode(m display.Mode) {
-	if err := s.monitor.Apply(m); err != nil {
-		s.notice = locales.NoticeModeRejected()
-	} else {
-		s.notice = locales.NoticeModeSwitched(m.Title(), m.RefreshRate)
+	if s.switchingMode {
+		return
 	}
-	s.refreshDisplay()
+	s.switchingMode = true
+	s.notice = locales.NoticeModeApplying()
+	monitor := s.monitor
+	go func() {
+		err := monitor.Apply(m)
+		if err == nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			err = monitor.WaitForMode(ctx, m)
+			cancel()
+		}
+		s.post(func() {
+			s.switchingMode = false
+			s.refreshDisplay()
+			if err != nil {
+				log.Printf("switch display mode: %v", err)
+				s.notice = locales.NoticeModeRejected()
+			} else {
+				s.notice = locales.NoticeModeSwitched(m.Title(), m.RefreshRate)
+			}
+		})
+	}()
+}
+
+func (s *store) configureHiDPI(remove bool) {
+	if s.configuringHiDPI || s.switchingMode {
+		return
+	}
+	s.configuringHiDPI = true
+	s.notice = locales.HiDPIAuthorizing()
+	monitor := s.monitor
+	w, h := monitor.NativeSize(s.modes, s.current)
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		err := monitor.ConfigureHiDPIOverride(ctx, remove, w, h)
+		s.post(func() {
+			s.configuringHiDPI = false
+			s.refreshDisplay()
+			if err != nil {
+				log.Printf("configure HiDPI: %v", err)
+				s.notice = locales.HiDPIConfigFailed()
+			} else if remove {
+				s.notice = locales.HiDPIRestored()
+			} else {
+				s.notice = locales.HiDPIInstalled()
+			}
+		})
+	}()
 }
 
 // competitive reports the monitor in its 1080p 320Hz mode: only then does
@@ -828,6 +877,7 @@ func (s *store) refreshDisplay() {
 	s.monitor = display.Target()
 	s.modes = s.monitor.Modes()
 	s.current, s.hasCurrent = s.monitor.CurrentMode()
+	s.hasHiDPIOverride = s.monitor.HasHiDPIOverride()
 }
 
 // displaysChanged follows plugging, mode changes and wake: the gamma table
