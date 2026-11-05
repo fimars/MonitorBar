@@ -86,6 +86,13 @@ func (m Mode) SizeKey() string {
 func (m Mode) ID() string    { return fmt.Sprintf("%s/%d", m.SizeKey(), m.RefreshRate) }
 func (m Mode) Title() string { return fmt.Sprintf("%d × %d", m.Width, m.Height) }
 
+// Matches compares desktop and render dimensions and refresh rate, ignoring OS identifiers.
+func (m Mode) Matches(other Mode) bool {
+	return m.Width == other.Width && m.Height == other.Height &&
+		m.PixelWidth == other.PixelWidth && m.PixelHeight == other.PixelHeight &&
+		m.RefreshRate == other.RefreshRate
+}
+
 // Resolutions returns one mode per resolution, HiDPI or not, preferring the
 // given refresh rate, from the largest.
 func Resolutions(modes []Mode, hiDPI bool, refreshRate int) []Mode {

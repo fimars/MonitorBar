@@ -140,5 +140,6 @@
   "hiDPIInstalled": "档位已添加。重新连接显示器或重启后，选择系统提供的 HiDPI 档位。",
   "hiDPIRestored": "已恢复原配置，重新连接显示器或重启后生效。",
   "hiDPIConfigFailed": "配置未完成或授权已取消，请重试。",
+  "hiDPIConfigTimedOut": "配置超时，请重试，并在 5 分钟内完成管理员授权。",
   "noticeModeApplying": "正在切换分辨率…"
 }

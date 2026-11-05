@@ -331,6 +331,7 @@
   "hiDPIInstalled": "Sizes added. Reconnect the display or restart, then choose an available HiDPI size.",
   "hiDPIRestored": "Original configuration restored. Reconnect the display or restart to apply.",
   "hiDPIConfigFailed": "Configuration was not completed or authorization was canceled. Try again.",
+  "hiDPIConfigTimedOut": "Configuration timed out. Try again and complete administrator authorization within 5 minutes.",
   "noticeModeApplying": "Switching resolution…",
   "@modePanel": {
     "placeholders": {

@@ -2,6 +2,28 @@ package display
 
 import "testing"
 
+func TestModeMatches(t *testing.T) {
+	want := Mode{Width: 2304, Height: 1296, PixelWidth: 4608, PixelHeight: 2592, RefreshRate: 100}
+	for _, tc := range []struct {
+		name  string
+		mode  Mode
+		match bool
+	}{
+		{"same dimensions and rate", want, true},
+		{"different desktop width", Mode{2300, 1296, 4608, 2592, 100, nativeMode{}}, false},
+		{"different desktop height", Mode{2304, 1290, 4608, 2592, 100, nativeMode{}}, false},
+		{"different render width", Mode{2304, 1296, 4096, 2592, 100, nativeMode{}}, false},
+		{"different render height", Mode{2304, 1296, 4608, 2304, 100, nativeMode{}}, false},
+		{"different refresh rate", Mode{2304, 1296, 4608, 2592, 60, nativeMode{}}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.mode.Matches(want); got != tc.match {
+				t.Fatalf("Matches(%+v, %+v) = %v, want %v", tc.mode, want, got, tc.match)
+			}
+		})
+	}
+}
+
 func TestRecommendedHiDPIModes(t *testing.T) {
 	presets := RecommendedHiDPI(2560, 1440)
 	if len(presets) != 3 || presets[0] != (Resolution{2560, 1440}) || presets[1] != (Resolution{2304, 1296}) || presets[2] != (Resolution{2496, 1404}) {

@@ -36,7 +36,7 @@ func (m Monitor) WaitForMode(ctx context.Context, want Mode) error {
 	defer tick.Stop()
 	for {
 		actual, ok := m.CurrentMode()
-		if ok && actual.ID() == want.ID() && actual.PixelWidth == want.PixelWidth && actual.PixelHeight == want.PixelHeight {
+		if ok && actual.Matches(want) {
 			return nil
 		}
 		select {

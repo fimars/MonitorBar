@@ -1449,6 +1449,16 @@ func (msgs Messages) HiDPIConfigFailed() string {
 	return Catalog.Format(msgs.locale, "hiDPIConfigFailed", nil)
 }
 
+// HiDPIConfigTimedOut says "Configuration timed out. Try again and complete administrator authorization within 5 minutes."
+// in the language the app shows.
+func HiDPIConfigTimedOut() string { return In(i18n.Locale()).HiDPIConfigTimedOut() }
+
+// HiDPIConfigTimedOut says "Configuration timed out. Try again and complete administrator authorization within 5 minutes."
+// in the language of msgs.
+func (msgs Messages) HiDPIConfigTimedOut() string {
+	return Catalog.Format(msgs.locale, "hiDPIConfigTimedOut", nil)
+}
+
 // NoticeModeApplying says "Switching resolution…"
 // in the language the app shows.
 func NoticeModeApplying() string { return In(i18n.Locale()).NoticeModeApplying() }

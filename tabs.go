@@ -363,7 +363,7 @@ func (p *panel) modes(c *ui.Context) {
 	if s.link != nil { // only the HyperOS remote can switch the monitor's own mode
 		card(c, func() {
 			trailing := ""
-			if s.switchingTo != "" {
+			if s.lanSwitchTarget != "" {
 				trailing = locales.CompetitiveSwitching()
 			}
 			cardTitle(c, locales.Competitive(), "sparkles", trailing)
@@ -450,13 +450,17 @@ func (p *panel) hidpi(c *ui.Context, rate int) {
 	}
 	card(c.Key("recommended"), func() {
 		cardTitle(c, locales.HiDPIRecommended(), "sparkles", "")
-		labels := []string{locales.HiDPISpace(), locales.HiDPIComfort(), locales.HiDPINearNative()}
+		labels := map[display.Resolution]string{
+			{Width: 2560, Height: 1440}: locales.HiDPISpace(),
+			{Width: 2304, Height: 1296}: locales.HiDPIComfort(),
+			{Width: 2496, Height: 1404}: locales.HiDPINearNative(),
+		}
 		missing := false
 		ui.Column(c).Children(func() {
-			for i, preset := range presets {
+			for _, preset := range presets {
 				mode, available := preset.HiDPIMode(s.modes, rate)
 				missing = missing || !available
-				selected := available && s.hasCurrent && s.current.ID() == mode.ID() && s.current.PixelWidth == mode.PixelWidth
+				selected := available && s.hasCurrent && s.current.Matches(mode)
 				row := ui.ButtonBase(c.Key(preset.Title())).Label(preset.Title()).Disabled(!available || s.switchingMode).
 					Height(44).PaddingX(9).Gap(8).Radius(8).Cursor(ui.CursorPointer)
 				if selected {
@@ -470,7 +474,7 @@ func (p *panel) hidpi(c *ui.Context, rate int) {
 						if selected {
 							title.FontWeight(600)
 						}
-						ui.Text(c, labels[i]).FontSize(10).TextColor(muted)
+						ui.Text(c, labels[preset]).FontSize(10).TextColor(muted)
 					})
 					caption := locales.HiDPINotAvailable()
 					if available {

@@ -63,7 +63,7 @@ type store struct {
 	switchingMode    bool
 	configuringHiDPI bool
 	hasHiDPIOverride bool
-	switchingTo      string // the mode the LAN remote is switching the monitor to
+	lanSwitchTarget  string // the mode the LAN remote is switching the monitor to
 
 	link      *mitv.Link // the display's LAN remote, nil until found
 	detecting bool
@@ -821,12 +821,16 @@ func (s *store) configureHiDPI(remove bool) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 		err := monitor.ConfigureHiDPIOverride(ctx, remove, w, h)
+		timedOut := errors.Is(ctx.Err(), context.DeadlineExceeded)
 		s.post(func() {
 			s.configuringHiDPI = false
 			s.refreshDisplay()
 			if err != nil {
 				log.Printf("configure HiDPI: %v", err)
 				s.notice = locales.HiDPIConfigFailed()
+				if timedOut {
+					s.notice = locales.HiDPIConfigTimedOut()
+				}
 			} else if remove {
 				s.notice = locales.HiDPIRestored()
 			} else {
@@ -847,12 +851,12 @@ func (s *store) competitive() bool {
 // new EDID, some seconds later.
 func (s *store) setCompetitive(on bool) {
 	link := s.link
-	if link == nil || s.switchingTo != "" || on == s.competitive() {
+	if link == nil || s.lanSwitchTarget != "" || on == s.competitive() {
 		return
 	}
-	s.switchingTo = "4K 160Hz"
+	s.lanSwitchTarget = "4K 160Hz"
 	if on {
-		s.switchingTo = "1080p 320Hz"
+		s.lanSwitchTarget = "1080p 320Hz"
 	}
 	s.notice = ""
 	go func() {
@@ -861,9 +865,9 @@ func (s *store) setCompetitive(on bool) {
 			if err != nil {
 				s.notice = locales.NoticeSwitchFailed()
 			} else {
-				s.notice = locales.NoticeSwitching(s.switchingTo)
+				s.notice = locales.NoticeSwitching(s.lanSwitchTarget)
 			}
-			s.switchingTo = ""
+			s.lanSwitchTarget = ""
 		})
 	}()
 }

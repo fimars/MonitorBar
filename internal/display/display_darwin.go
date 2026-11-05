@@ -295,7 +295,7 @@ func (m Monitor) Apply(mode Mode) error {
 	// Resolve again: display mode identifiers can change after a switch.
 	if cgsConfigureDisplayMode != nil {
 		for _, info := range m.ModeDiagnostics() {
-			if info.Source == "CGS" && info.Usable && info.ID() == mode.ID() && info.PixelWidth == mode.PixelWidth && info.PixelHeight == mode.PixelHeight {
+			if info.Source == "CGS" && info.Usable && info.Mode.Matches(mode) {
 				var config uintptr
 				if code := cgBeginDisplayConfiguration(&config); code != 0 {
 					return fmt.Errorf("display: begin configuration: %d", code)
@@ -320,7 +320,7 @@ func (m Monitor) Apply(mode Mode) error {
 	for i := range cfArrayGetCount(array) {
 		candidate := cfArrayGetValueAtIndex(array, i)
 		got := newMode(candidate)
-		if got.ID() == mode.ID() && got.PixelWidth == mode.PixelWidth && got.PixelHeight == mode.PixelHeight {
+		if got.Matches(mode) {
 			ref = candidate
 			break
 		}
