@@ -345,8 +345,20 @@ func (p *panel) modes(c *ui.Context) {
 	if s.hasCurrent {
 		rate = s.current.RefreshRate
 	}
-	if runtime.GOOS == "darwin" {
-		p.hidpi(c, rate)
+	if s.hasCurrent {
+		card(c.Key("current-mode"), func() {
+			ui.Row(c).Gap(4).TextColor(muted).Children(func() {
+				icon(c, "display").FontSize(10)
+				ui.Text(c, locales.ModeDesktop()).FontSize(10).FontWeight(500).Grow(1)
+				ui.Textf(c, "%d Hz", rate).FontSize(10)
+			})
+			ui.Row(c).Gap(8).Children(func() {
+				ui.Text(c, s.current.Title()).FontSize(22).FontWeight(600).FontFeatures("tnum").Grow(1)
+				if s.current.HiDPI() {
+					ui.Text(c, "HiDPI").FontSize(11).TextColor(accent)
+				}
+			})
+		})
 	}
 	if s.link != nil { // only the HyperOS remote can switch the monitor's own mode
 		card(c, func() {
@@ -378,25 +390,59 @@ func (p *panel) modes(c *ui.Context) {
 			})
 		})
 	}
-	p.resolutions(c, locales.ModesHiDPI(), "zoom", display.Resolutions(s.modes, true, rate))
-	p.resolutions(c, locales.ModesStandard(), "layers", display.Resolutions(s.modes, false, rate))
+	p.resolutions(c, locales.ModesHiDPI(), "zoom", display.Resolutions(s.modes, true, rate), &p.hiDPIModesOpen)
+	p.resolutions(c, locales.ModesStandard(), "layers", display.Resolutions(s.modes, false, rate), &p.standardModesOpen)
+	if runtime.GOOS == "darwin" {
+		e := ui.ButtonBase(c.Key("advanced-modes")).Height(44).PaddingX(12).Gap(6).Radius(12).
+			Background(cardFill).Border(0.7, cardStroke).Cursor(ui.CursorPointer).
+			Label(locales.ModesAdvanced()).Role(ui.RoleDisclosure).Expanded(p.advancedOpen)
+		if e.Hovered() || e.Pressed() {
+			e.Background(ui.RGBA(255, 255, 255, 0.11))
+		}
+		if e.Clicked() {
+			p.advancedOpen = !p.advancedOpen
+			e.Expanded(p.advancedOpen)
+		}
+		e.Children(func() {
+			icon(c, "sliders").FontSize(13)
+			ui.Text(c, locales.ModesAdvanced()).FontSize(12).FontWeight(600).Grow(1)
+			chevron := "chevron"
+			if p.advancedOpen {
+				chevron = "chevronDown"
+			}
+			icon(c, chevron).FontSize(11).TextColor(muted)
+		})
+		if p.advancedOpen {
+			p.hidpi(c, rate)
+		}
+	}
 }
 
 func (p *panel) hidpi(c *ui.Context, rate int) {
 	s := p.s
 	w, h := s.monitor.NativeSize(s.modes, s.current)
 	card(c.Key("scaling"), func() {
-		cardTitle(c, locales.ModeDesktop(), "display", s.current.Title())
-		ui.Text(c, locales.ModePanel(w, h)).FontSize(11).TextColor(muted)
+		physical := ""
 		if s.monitor.PhysicalWidthMM > 0 && s.monitor.PhysicalHeightMM > 0 {
 			diagonal := math.Hypot(float64(s.monitor.PhysicalWidthMM), float64(s.monitor.PhysicalHeightMM)) / 25.4
 			ppi := math.Hypot(float64(w), float64(h)) / diagonal
-			ui.Text(c, fmt.Sprintf("%.0f″ · %.0f PPI", diagonal, ppi)).FontSize(10).TextColor(muted)
+			physical = fmt.Sprintf("%.0f″ · %.0f PPI", diagonal, ppi)
 		}
-		if s.hasCurrent {
-			ui.Text(c, locales.ModeRendered(s.current.PixelWidth, s.current.PixelHeight)).FontSize(11).TextColor(muted)
-		}
-		ui.Text(c, locales.ModeScalingNote()).FontSize(10).TextColor(muted)
+		cardTitle(c, locales.ModeDisplayInfo(), "display", physical)
+		ui.Column(c).Gap(6).Children(func() {
+			detail := func(label string, width, height int) {
+				ui.Row(c).Gap(8).Children(func() {
+					ui.Text(c, label).FontSize(11).TextColor(muted).Grow(1)
+					ui.Textf(c, "%d × %d", width, height).FontSize(11).FontFeatures("tnum")
+				})
+			}
+			if s.hasCurrent {
+				detail(locales.ModeDesktop(), s.current.Width, s.current.Height)
+				detail(locales.ModeRenderSize(), s.current.PixelWidth, s.current.PixelHeight)
+			}
+			detail(locales.ModePanelSize(), w, h)
+		})
+		ui.Text(c, locales.ModeScalingNote()).Width(panelWidth - 50).FontSize(10).TextColor(muted)
 	})
 	presets := display.RecommendedHiDPI(w, h)
 	if len(presets) == 0 || s.monitor.Builtin {
@@ -406,57 +452,75 @@ func (p *panel) hidpi(c *ui.Context, rate int) {
 		cardTitle(c, locales.HiDPIRecommended(), "sparkles", "")
 		labels := []string{locales.HiDPISpace(), locales.HiDPIComfort(), locales.HiDPINearNative()}
 		missing := false
-		for i, preset := range presets {
-			mode, available := preset.HiDPIMode(s.modes, rate)
-			missing = missing || !available
-			selected := available && s.hasCurrent && s.current.ID() == mode.ID() && s.current.PixelWidth == mode.PixelWidth
-			row := chip(c.Key(preset.Title()), selected).Disabled(!available || s.switchingMode).Height(56).PaddingX(10)
-			row.Children(func() {
-				ui.Row(c).FillWidth().Gap(8).AlignItems(ui.Center).Children(func() {
+		ui.Column(c).Children(func() {
+			for i, preset := range presets {
+				mode, available := preset.HiDPIMode(s.modes, rate)
+				missing = missing || !available
+				selected := available && s.hasCurrent && s.current.ID() == mode.ID() && s.current.PixelWidth == mode.PixelWidth
+				row := ui.ButtonBase(c.Key(preset.Title())).Label(preset.Title()).Disabled(!available || s.switchingMode).
+					Height(44).PaddingX(9).Gap(8).Radius(8).Cursor(ui.CursorPointer)
+				if selected {
+					row.Background(accent.Alpha(0.14))
+				} else if row.Hovered() {
+					row.Background(ui.RGBA(255, 255, 255, 0.05))
+				}
+				row.Children(func() {
 					ui.Column(c).Grow(1).Gap(3).Children(func() {
-						ui.Text(c, preset.Title()).FontSize(12).FontWeight(600)
+						title := ui.Text(c, preset.Title()).FontSize(12).FontWeight(500).FontFeatures("tnum")
+						if selected {
+							title.FontWeight(600)
+						}
 						ui.Text(c, labels[i]).FontSize(10).TextColor(muted)
 					})
 					caption := locales.HiDPINotAvailable()
 					if available {
-						caption = fmt.Sprintf("HiDPI · %d Hz", mode.RefreshRate)
+						caption = fmt.Sprintf("%d Hz", mode.RefreshRate)
 					}
 					ui.Text(c, caption).FontSize(10).TextColor(muted)
+					check := icon(c, "check").FontSize(10).TextColor(accent)
+					if !selected {
+						check.Opacity(0)
+					}
 				})
-			})
-			if row.Clicked() && available && !s.switchingMode {
-				s.applyMode(mode)
+				if row.Clicked() && available && !selected && !s.switchingMode {
+					s.applyMode(mode)
+				}
 			}
-		}
-		if missing {
-			ui.Text(c, locales.HiDPIInstallNote()).FontSize(10).TextColor(muted)
-			ui.Column(c).Disabled(s.configuringHiDPI || s.switchingMode).Children(func() {
-				if chipText(c.Key("install-hidpi"), locales.HiDPIInstall(), false) {
-					s.configureHiDPI(false)
+		})
+		if missing || s.hasHiDPIOverride {
+			ui.Column(c).Gap(6).Padding(8, 0, 0).BorderWidth(0.7, 0, 0, 0).BorderColor(cardStroke).Children(func() {
+				if missing {
+					ui.Text(c, locales.HiDPIInstallNote()).Width(panelWidth - 50).FontSize(10).TextColor(muted)
 				}
-			})
-		}
-		if s.hasHiDPIOverride {
-			ui.Column(c).Disabled(s.configuringHiDPI || s.switchingMode).Children(func() {
-				if chipText(c.Key("restore-hidpi"), locales.HiDPIRestore(), false) {
-					s.configureHiDPI(true)
-				}
+				ui.Column(c).Gap(6).Disabled(s.configuringHiDPI || s.switchingMode).Children(func() {
+					if missing && chipText(c.Key("install-hidpi"), locales.HiDPIInstall(), false) {
+						s.configureHiDPI(false)
+					}
+					if s.hasHiDPIOverride && chipText(c.Key("restore-hidpi"), locales.HiDPIRestore(), false) {
+						s.configureHiDPI(true)
+					}
+				})
 			})
 		}
 	})
 }
 
-func (p *panel) resolutions(c *ui.Context, title, iconName string, modes []display.Mode) {
+func (p *panel) resolutions(c *ui.Context, title, iconName string, modes []display.Mode, open *bool) {
 	s := p.s
 	if len(modes) == 0 {
 		return
 	}
 	card(c.Key(iconName), func() {
 		cardTitle(c, title, iconName, locales.ModesCount(len(modes)))
-		ui.Column(c).Gap(4).Children(func() {
-			for _, m := range modes {
+		visible := modes
+		if !*open {
+			visible = modes[:min(3, len(modes))]
+		}
+		ui.Column(c).Children(func() {
+			for _, m := range visible {
 				selected := s.hasCurrent && m.SizeKey() == s.current.SizeKey()
-				row := ui.Row(c.Key(m.ID())).Disabled(s.switchingMode).Height(28).PaddingX(9).Gap(8).Radius(8).Cursor(ui.CursorPointer)
+				row := ui.ButtonBase(c.Key(m.ID())).Disabled(s.switchingMode).Height(32).PaddingX(9).Gap(8).Radius(8).Cursor(ui.CursorPointer).
+					Label(m.Title())
 				if selected {
 					row.Background(accent.Alpha(0.14))
 				} else if row.Hovered() {
@@ -477,11 +541,30 @@ func (p *panel) resolutions(c *ui.Context, title, iconName string, modes []displ
 						check.Opacity(0)
 					}
 				})
-				if row.Clicked() && !s.switchingMode {
+				if row.Clicked() && !selected && !s.switchingMode {
 					s.applyMode(m)
 				}
 			}
 		})
+		if len(modes) > 3 {
+			label, chevron := locales.ModesShowMore(len(modes)-3), "chevronDown"
+			if *open {
+				label, chevron = locales.ModesShowLess(), "chevronUp"
+			}
+			e := ui.ButtonBase(c.Key("more")).Height(28).PaddingX(9).Gap(8).Radius(8).
+				Label(label).Role(ui.RoleDisclosure).Expanded(*open).Cursor(ui.CursorPointer).TextColor(muted)
+			if e.Hovered() || e.Pressed() {
+				e.Background(ui.RGBA(255, 255, 255, 0.05))
+			}
+			e.Children(func() {
+				ui.Text(c, label).FontSize(11).Grow(1)
+				icon(c, chevron).FontSize(10)
+			})
+			if e.Clicked() {
+				*open = !*open
+				c.Invalidate()
+			}
+		}
 	})
 }
 

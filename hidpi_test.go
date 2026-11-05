@@ -17,7 +17,14 @@ func TestHiDPIRecommendations(t *testing.T) {
 	p.s.link = nil
 	p.s.prefs.Tab = "modes"
 	tt := newTester(p)
-	for _, text := range []string{"桌面空间", "面板 2560×1440", "渲染 4096×2304", "27″ · 109 PPI", "推荐 HiDPI", "2560 × 1440", "2304 × 1296", "2496 × 1404", "HiDPI · 100 Hz", "系统尚未提供", "添加缺失档位…"} {
+	if tt.HasText("推荐 HiDPI") || tt.HasText("添加缺失档位…") {
+		t.Fatal("advanced operations should start collapsed")
+	}
+	if err := tt.Click("高级设置"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	for _, text := range []string{"显示器信息", "桌面空间", "面板像素", "渲染尺寸", "4096 × 2304", "27″ · 109 PPI", "推荐 HiDPI", "2560 × 1440", "2304 × 1296", "2496 × 1404", "100 Hz", "系统尚未提供", "添加缺失档位…"} {
 		if !tt.HasText(text) {
 			t.Errorf("missing %q in %q", text, tt.Texts())
 		}

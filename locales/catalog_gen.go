@@ -963,6 +963,66 @@ func (msgs Messages) RefreshRate() string {
 	return Catalog.Format(msgs.locale, "refreshRate", nil)
 }
 
+// ModesShowMore says "Show {count} more"
+// in the language the app shows.
+func ModesShowMore(count int) string { return In(i18n.Locale()).ModesShowMore(count) }
+
+// ModesShowMore says "Show {count} more"
+// in the language of msgs.
+func (msgs Messages) ModesShowMore(count int) string {
+	return Catalog.Format(msgs.locale, "modesShowMore", map[string]any{"count": count})
+}
+
+// ModesShowLess says "Show less"
+// in the language the app shows.
+func ModesShowLess() string { return In(i18n.Locale()).ModesShowLess() }
+
+// ModesShowLess says "Show less"
+// in the language of msgs.
+func (msgs Messages) ModesShowLess() string {
+	return Catalog.Format(msgs.locale, "modesShowLess", nil)
+}
+
+// ModeDisplayInfo says "Display Details"
+// in the language the app shows.
+func ModeDisplayInfo() string { return In(i18n.Locale()).ModeDisplayInfo() }
+
+// ModeDisplayInfo says "Display Details"
+// in the language of msgs.
+func (msgs Messages) ModeDisplayInfo() string {
+	return Catalog.Format(msgs.locale, "modeDisplayInfo", nil)
+}
+
+// ModeRenderSize says "Render size"
+// in the language the app shows.
+func ModeRenderSize() string { return In(i18n.Locale()).ModeRenderSize() }
+
+// ModeRenderSize says "Render size"
+// in the language of msgs.
+func (msgs Messages) ModeRenderSize() string {
+	return Catalog.Format(msgs.locale, "modeRenderSize", nil)
+}
+
+// ModePanelSize says "Panel pixels"
+// in the language the app shows.
+func ModePanelSize() string { return In(i18n.Locale()).ModePanelSize() }
+
+// ModePanelSize says "Panel pixels"
+// in the language of msgs.
+func (msgs Messages) ModePanelSize() string {
+	return Catalog.Format(msgs.locale, "modePanelSize", nil)
+}
+
+// ModesAdvanced says "Advanced Settings"
+// in the language the app shows.
+func ModesAdvanced() string { return In(i18n.Locale()).ModesAdvanced() }
+
+// ModesAdvanced says "Advanced Settings"
+// in the language of msgs.
+func (msgs Messages) ModesAdvanced() string {
+	return Catalog.Format(msgs.locale, "modesAdvanced", nil)
+}
+
 // ModesHiDPI says "HiDPI (sharp)"
 // in the language the app shows.
 func ModesHiDPI() string { return In(i18n.Locale()).ModesHiDPI() }

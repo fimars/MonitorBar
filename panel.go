@@ -39,11 +39,14 @@ type panel struct {
 	// onHeight hears the panel's natural height once it changes.
 	onHeight func(h int)
 
-	height         int
-	contentHeight  float32
-	overviewHeight float32 // every tab takes it, once measured (#9)
-	settle         int     // frames still to draw while the sizes catch up
-	ownFrame       bool    // this frame was asked for by settle
+	height            int
+	contentHeight     float32
+	overviewHeight    float32 // every tab takes it, once measured (#9)
+	settle            int     // frames still to draw while the sizes catch up
+	ownFrame          bool    // this frame was asked for by settle
+	hiDPIModesOpen    bool
+	standardModesOpen bool
+	advancedOpen      bool
 }
 
 func (p *panel) view(c *ui.Context) {

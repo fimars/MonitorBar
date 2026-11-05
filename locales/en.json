@@ -184,6 +184,19 @@
   "competitive": "320Hz Competitive Mode",
   "competitiveSwitching": "Switching…",
   "refreshRate": "Refresh Rate",
+  "modesShowMore": "Show {count} more",
+  "@modesShowMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "modesShowLess": "Show less",
+  "modeDisplayInfo": "Display Details",
+  "modeRenderSize": "Render size",
+  "modePanelSize": "Panel pixels",
+  "modesAdvanced": "Advanced Settings",
   "modesHiDPI": "HiDPI (sharp)",
   "modesStandard": "Standard",
   "modesCount": "{count, plural, one {# mode} other {# modes}}",
