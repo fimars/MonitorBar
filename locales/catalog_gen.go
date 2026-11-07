@@ -65,6 +65,58 @@ func (msgs Messages) MenuDetect() string {
 	return Catalog.Format(msgs.locale, "menuDetect", nil)
 }
 
+// MenuLink says "LAN Remote"
+// in the language the app shows.
+func MenuLink() string { return In(i18n.Locale()).MenuLink() }
+
+// MenuLink says "LAN Remote"
+// in the language of msgs.
+func (msgs Messages) MenuLink() string {
+	return Catalog.Format(msgs.locale, "menuLink", nil)
+}
+
+// MenuLinkMonitor says "{name} ({host})"
+// in the language the app shows.
+func MenuLinkMonitor(name string, host string) string {
+	return In(i18n.Locale()).MenuLinkMonitor(name, host)
+}
+
+// MenuLinkMonitor says "{name} ({host})"
+// in the language of msgs.
+func (msgs Messages) MenuLinkMonitor(name string, host string) string {
+	return Catalog.Format(msgs.locale, "menuLinkMonitor", map[string]any{"name": name, "host": host})
+}
+
+// MenuLinkNone says "None"
+// in the language the app shows.
+func MenuLinkNone() string { return In(i18n.Locale()).MenuLinkNone() }
+
+// MenuLinkNone says "None"
+// in the language of msgs.
+func (msgs Messages) MenuLinkNone() string {
+	return Catalog.Format(msgs.locale, "menuLinkNone", nil)
+}
+
+// SyncDisplays says "Sync"
+// in the language the app shows.
+func SyncDisplays() string { return In(i18n.Locale()).SyncDisplays() }
+
+// SyncDisplays says "Sync"
+// in the language of msgs.
+func (msgs Messages) SyncDisplays() string {
+	return Catalog.Format(msgs.locale, "syncDisplays", nil)
+}
+
+// SyncDisplaysNote says "Change the brightness, color temperature, scenes, volume and input of every display at once"
+// in the language the app shows.
+func SyncDisplaysNote() string { return In(i18n.Locale()).SyncDisplaysNote() }
+
+// SyncDisplaysNote says "Change the brightness, color temperature, scenes, volume and input of every display at once"
+// in the language of msgs.
+func (msgs Messages) SyncDisplaysNote() string {
+	return Catalog.Format(msgs.locale, "syncDisplaysNote", nil)
+}
+
 // MenuDisplaySettings says "Open Display Settings…"
 // in the language the app shows.
 func MenuDisplaySettings() string { return In(i18n.Locale()).MenuDisplaySettings() }
@@ -477,6 +529,76 @@ func (msgs Messages) SceneNight() string {
 	return Catalog.Format(msgs.locale, "sceneNight", nil)
 }
 
+// SceneSaveLabel says "Save the current brightness and color temperature as a scene"
+// in the language the app shows.
+func SceneSaveLabel() string { return In(i18n.Locale()).SceneSaveLabel() }
+
+// SceneSaveLabel says "Save the current brightness and color temperature as a scene"
+// in the language of msgs.
+func (msgs Messages) SceneSaveLabel() string {
+	return Catalog.Format(msgs.locale, "sceneSaveLabel", nil)
+}
+
+// SceneCustomName says "Scene {n}"
+// in the language the app shows.
+func SceneCustomName(n int) string { return In(i18n.Locale()).SceneCustomName(n) }
+
+// SceneCustomName says "Scene {n}"
+// in the language of msgs.
+func (msgs Messages) SceneCustomName(n int) string {
+	return Catalog.Format(msgs.locale, "sceneCustomName", map[string]any{"n": n})
+}
+
+// SavedScenes says "My Scenes"
+// in the language the app shows.
+func SavedScenes() string { return In(i18n.Locale()).SavedScenes() }
+
+// SavedScenes says "My Scenes"
+// in the language of msgs.
+func (msgs Messages) SavedScenes() string {
+	return Catalog.Format(msgs.locale, "savedScenes", nil)
+}
+
+// SavedScenesNote says "Click a name to rename it"
+// in the language the app shows.
+func SavedScenesNote() string { return In(i18n.Locale()).SavedScenesNote() }
+
+// SavedScenesNote says "Click a name to rename it"
+// in the language of msgs.
+func (msgs Messages) SavedScenesNote() string {
+	return Catalog.Format(msgs.locale, "savedScenesNote", nil)
+}
+
+// SceneUntitled says "Untitled"
+// in the language the app shows.
+func SceneUntitled() string { return In(i18n.Locale()).SceneUntitled() }
+
+// SceneUntitled says "Untitled"
+// in the language of msgs.
+func (msgs Messages) SceneUntitled() string {
+	return Catalog.Format(msgs.locale, "sceneUntitled", nil)
+}
+
+// SceneName says "Scene name"
+// in the language the app shows.
+func SceneName() string { return In(i18n.Locale()).SceneName() }
+
+// SceneName says "Scene name"
+// in the language of msgs.
+func (msgs Messages) SceneName() string {
+	return Catalog.Format(msgs.locale, "sceneName", nil)
+}
+
+// SceneDelete says "Delete {name}"
+// in the language the app shows.
+func SceneDelete(name string) string { return In(i18n.Locale()).SceneDelete(name) }
+
+// SceneDelete says "Delete {name}"
+// in the language of msgs.
+func (msgs Messages) SceneDelete(name string) string {
+	return Catalog.Format(msgs.locale, "sceneDelete", map[string]any{"name": name})
+}
+
 // Warmth says "Color Temperature"
 // in the language the app shows.
 func Warmth() string { return In(i18n.Locale()).Warmth() }
@@ -747,6 +869,16 @@ func (msgs Messages) ShowHud() string {
 	return Catalog.Format(msgs.locale, "showHud", nil)
 }
 
+// VolumeStep says "Volume step"
+// in the language the app shows.
+func VolumeStep() string { return In(i18n.Locale()).VolumeStep() }
+
+// VolumeStep says "Volume step"
+// in the language of msgs.
+func (msgs Messages) VolumeStep() string {
+	return Catalog.Format(msgs.locale, "volumeStep", nil)
+}
+
 // MediaKeys says "Use the keyboard's brightness and volume keys"
 // in the language the app shows.
 func MediaKeys() string { return In(i18n.Locale()).MediaKeys() }
@@ -993,6 +1125,26 @@ func (msgs Messages) ModesCount(count int) string {
 	return Catalog.Format(msgs.locale, "modesCount", map[string]any{"count": count})
 }
 
+// ModesShowMore says "{count, plural, one {Show # more mode} other {Show # more modes}}"
+// in the language the app shows.
+func ModesShowMore(count int) string { return In(i18n.Locale()).ModesShowMore(count) }
+
+// ModesShowMore says "{count, plural, one {Show # more mode} other {Show # more modes}}"
+// in the language of msgs.
+func (msgs Messages) ModesShowMore(count int) string {
+	return Catalog.Format(msgs.locale, "modesShowMore", map[string]any{"count": count})
+}
+
+// ModesShowLess says "Show less"
+// in the language the app shows.
+func ModesShowLess() string { return In(i18n.Locale()).ModesShowLess() }
+
+// ModesShowLess says "Show less"
+// in the language of msgs.
+func (msgs Messages) ModesShowLess() string {
+	return Catalog.Format(msgs.locale, "modesShowLess", nil)
+}
+
 // ModeRendered says "Rendered at {width, number, ::group-off}×{height, number, ::group-off}"
 // in the language the app shows.
 func ModeRendered(width int, height int) string { return In(i18n.Locale()).ModeRendered(width, height) }
@@ -1187,6 +1339,16 @@ func (msgs Messages) NoticeUpdateFailed() string {
 	return Catalog.Format(msgs.locale, "noticeUpdateFailed", nil)
 }
 
+// NoticeModeApplying says "Switching display mode…"
+// in the language the app shows.
+func NoticeModeApplying() string { return In(i18n.Locale()).NoticeModeApplying() }
+
+// NoticeModeApplying says "Switching display mode…"
+// in the language of msgs.
+func (msgs Messages) NoticeModeApplying() string {
+	return Catalog.Format(msgs.locale, "noticeModeApplying", nil)
+}
+
 // NoticeModeRejected says "Couldn't switch: the display refused the mode"
 // in the language the app shows.
 func NoticeModeRejected() string { return In(i18n.Locale()).NoticeModeRejected() }
@@ -1237,4 +1399,144 @@ func NoticeLoginFailed(error string) string { return In(i18n.Locale()).NoticeLog
 // in the language of msgs.
 func (msgs Messages) NoticeLoginFailed(error string) string {
 	return Catalog.Format(msgs.locale, "noticeLoginFailed", map[string]any{"error": error})
+}
+
+// ModesAdvanced says "Advanced Settings"
+// in the language the app shows.
+func ModesAdvanced() string { return In(i18n.Locale()).ModesAdvanced() }
+
+// ModesAdvanced says "Advanced Settings"
+// in the language of msgs.
+func (msgs Messages) ModesAdvanced() string {
+	return Catalog.Format(msgs.locale, "modesAdvanced", nil)
+}
+
+// HiDPIRecommended says "Recommended HiDPI"
+// in the language the app shows.
+func HiDPIRecommended() string { return In(i18n.Locale()).HiDPIRecommended() }
+
+// HiDPIRecommended says "Recommended HiDPI"
+// in the language of msgs.
+func (msgs Messages) HiDPIRecommended() string {
+	return Catalog.Format(msgs.locale, "hiDPIRecommended", nil)
+}
+
+// HiDPISpace says "Recommended · more desktop space"
+// in the language the app shows.
+func HiDPISpace() string { return In(i18n.Locale()).HiDPISpace() }
+
+// HiDPISpace says "Recommended · more desktop space"
+// in the language of msgs.
+func (msgs Messages) HiDPISpace() string {
+	return Catalog.Format(msgs.locale, "hiDPISpace", nil)
+}
+
+// HiDPIComfort says "Larger text"
+// in the language the app shows.
+func HiDPIComfort() string { return In(i18n.Locale()).HiDPIComfort() }
+
+// HiDPIComfort says "Larger text"
+// in the language of msgs.
+func (msgs Messages) HiDPIComfort() string {
+	return Catalog.Format(msgs.locale, "hiDPIComfort", nil)
+}
+
+// HiDPINearNative says "Alternative size"
+// in the language the app shows.
+func HiDPINearNative() string { return In(i18n.Locale()).HiDPINearNative() }
+
+// HiDPINearNative says "Alternative size"
+// in the language of msgs.
+func (msgs Messages) HiDPINearNative() string {
+	return Catalog.Format(msgs.locale, "hiDPINearNative", nil)
+}
+
+// HiDPINotAvailable says "Not available yet"
+// in the language the app shows.
+func HiDPINotAvailable() string { return In(i18n.Locale()).HiDPINotAvailable() }
+
+// HiDPINotAvailable says "Not available yet"
+// in the language of msgs.
+func (msgs Messages) HiDPINotAvailable() string {
+	return Catalog.Format(msgs.locale, "hiDPINotAvailable", nil)
+}
+
+// HiDPIInstall says "Add missing sizes…"
+// in the language the app shows.
+func HiDPIInstall() string { return In(i18n.Locale()).HiDPIInstall() }
+
+// HiDPIInstall says "Add missing sizes…"
+// in the language of msgs.
+func (msgs Messages) HiDPIInstall() string {
+	return Catalog.Format(msgs.locale, "hiDPIInstall", nil)
+}
+
+// HiDPIInstallNote says "Requires administrator authorization to write a display Override file. Displays of this model share the configuration…"
+// in the language the app shows.
+func HiDPIInstallNote() string { return In(i18n.Locale()).HiDPIInstallNote() }
+
+// HiDPIInstallNote says "Requires administrator authorization to write a display Override file. Displays of this model share the configuration…"
+// in the language of msgs.
+func (msgs Messages) HiDPIInstallNote() string {
+	return Catalog.Format(msgs.locale, "hiDPIInstallNote", nil)
+}
+
+// HiDPIRestore says "Restore original display configuration…"
+// in the language the app shows.
+func HiDPIRestore() string { return In(i18n.Locale()).HiDPIRestore() }
+
+// HiDPIRestore says "Restore original display configuration…"
+// in the language of msgs.
+func (msgs Messages) HiDPIRestore() string {
+	return Catalog.Format(msgs.locale, "hiDPIRestore", nil)
+}
+
+// HiDPIAuthorizing says "Waiting for administrator authorization…"
+// in the language the app shows.
+func HiDPIAuthorizing() string { return In(i18n.Locale()).HiDPIAuthorizing() }
+
+// HiDPIAuthorizing says "Waiting for administrator authorization…"
+// in the language of msgs.
+func (msgs Messages) HiDPIAuthorizing() string {
+	return Catalog.Format(msgs.locale, "hiDPIAuthorizing", nil)
+}
+
+// HiDPIInstalled says "Override file saved. Reconnect the display or restart, then check for available HiDPI sizes. macOS may not offer ever…"
+// in the language the app shows.
+func HiDPIInstalled() string { return In(i18n.Locale()).HiDPIInstalled() }
+
+// HiDPIInstalled says "Override file saved. Reconnect the display or restart, then check for available HiDPI sizes. macOS may not offer ever…"
+// in the language of msgs.
+func (msgs Messages) HiDPIInstalled() string {
+	return Catalog.Format(msgs.locale, "hiDPIInstalled", nil)
+}
+
+// HiDPIRestored says "Original configuration restored. Reconnect the display or restart to apply."
+// in the language the app shows.
+func HiDPIRestored() string { return In(i18n.Locale()).HiDPIRestored() }
+
+// HiDPIRestored says "Original configuration restored. Reconnect the display or restart to apply."
+// in the language of msgs.
+func (msgs Messages) HiDPIRestored() string {
+	return Catalog.Format(msgs.locale, "hiDPIRestored", nil)
+}
+
+// HiDPIRecoveryNote says "Displays of this model share the configuration. MonitorBar keeps the original file in its managed backup. Restore req…"
+// in the language the app shows.
+func HiDPIRecoveryNote() string { return In(i18n.Locale()).HiDPIRecoveryNote() }
+
+// HiDPIRecoveryNote says "Displays of this model share the configuration. MonitorBar keeps the original file in its managed backup. Restore req…"
+// in the language of msgs.
+func (msgs Messages) HiDPIRecoveryNote() string {
+	return Catalog.Format(msgs.locale, "hiDPIRecoveryNote", nil)
+}
+
+// HiDPIConfigFailed says "Configuration reported an error. Check the current configuration before retrying. Any existing backup is kept for rec…"
+// in the language the app shows.
+func HiDPIConfigFailed(reason string) string { return In(i18n.Locale()).HiDPIConfigFailed(reason) }
+
+// HiDPIConfigFailed says "Configuration reported an error. Check the current configuration before retrying. Any existing backup is kept for rec…"
+// in the language of msgs.
+func (msgs Messages) HiDPIConfigFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "hiDPIConfigFailed", map[string]any{"reason": reason})
 }

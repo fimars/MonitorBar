@@ -8,11 +8,19 @@ import (
 
 // settings are the choices kept between launches, in a JSON file.
 type settings struct {
+	// The first display's picture and LAN remote, as before each display
+	// had its own: the defaults of a display seen for the first time.
 	SoftBrightness float64 `json:"softBrightness"` // gamma %, 20...100
 	Warmth         float64 `json:"warmth"`         // 0...100
+	NetworkHost    string  `json:"networkHost"`
 	Tab            string  `json:"tab"`
-	NetworkHost    string  `json:"networkHost"` // the display found last time
 	LaunchedBefore bool    `json:"launchedBefore"`
+
+	// Each display's own, by its key (#14).
+	Displays map[string]*displaySettings `json:"displays,omitempty"`
+	Display  string                      `json:"display,omitempty"` // the one the panel shows
+	// Whether the picture, volume and input change on every display at once.
+	SyncDisplays bool `json:"syncDisplays"`
 
 	// Switching to the day and night scenes at set times.
 	AutoSwitch bool   `json:"autoSwitch"`
@@ -21,6 +29,9 @@ type settings struct {
 	DayScene   string `json:"dayScene"`
 	NightScene string `json:"nightScene"`
 	AutoPeriod string `json:"autoPeriod"` // the period whose scene was applied last
+
+	// Scenes the user saved, after the built-in ones (#13).
+	SavedScenes []savedScene `json:"savedScenes,omitempty"`
 
 	// Following the built-in display's brightness over DDC/CI (MacBooks).
 	FollowBuiltin bool    `json:"followBuiltin"`
@@ -31,12 +42,46 @@ type settings struct {
 	// for none.
 	Shortcuts map[string]string `json:"shortcuts,omitempty"`
 	// Taking the keyboard's brightness and volume keys (macOS).
-	MediaKeys bool `json:"mediaKeys"`
+	MediaKeys  bool `json:"mediaKeys"`
+	VolumeStep int  `json:"volumeStep,omitempty"`
 	// Showing the level under the menu bar icon as the keys change it.
 	HUD bool `json:"hud"`
 	// The language chosen in the panel, "" to follow the system's.
 	Language string `json:"language,omitempty"`
 	path     string
+}
+
+// displaySettings are a display's picture and the LAN remote paired with it.
+type displaySettings struct {
+	SoftBrightness float64 `json:"softBrightness"`
+	Warmth         float64 `json:"warmth"`
+	NetworkHost    string  `json:"networkHost,omitempty"` // noLink when the user chose none
+}
+
+// noLink pairs a display with no LAN remote, by the user's choice.
+const noLink = "none"
+
+// display is the settings of the display of key, made on first use from the
+// defaults.
+func (s *settings) display(key string) *displaySettings {
+	d := s.Displays[key]
+	if d == nil {
+		if s.Displays == nil {
+			s.Displays = map[string]*displaySettings{}
+		}
+		d = &displaySettings{SoftBrightness: s.SoftBrightness, Warmth: s.Warmth}
+		s.Displays[key] = d
+	}
+	return d
+}
+
+// savedScene is the picture as it was when the user saved it.
+type savedScene struct {
+	ID        string   `json:"id"`
+	Name      string   `json:"name"`
+	Backlight *float64 `json:"backlight,omitempty"` // DDC/CI %, absent when it reached none
+	Soft      float64  `json:"softBrightness"`
+	Warmth    float64  `json:"warmth"`
 }
 
 // dataDir is where MonitorBar keeps its files.
@@ -72,4 +117,11 @@ func (s *settings) save() {
 	}
 	_ = os.MkdirAll(filepath.Dir(s.path), 0o755)
 	_ = os.WriteFile(s.path, data, 0o644)
+}
+
+func (s *settings) volumeStep() float64 {
+	if s.VolumeStep < 1 || s.VolumeStep > 10 {
+		return shortcutStep
+	}
+	return float64(s.VolumeStep)
 }

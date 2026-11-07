@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/egoist/mygo"
 
+	"github.com/binaryify/MonitorBar/internal/display"
 	"github.com/binaryify/MonitorBar/internal/mediakeys"
 )
 
@@ -19,19 +20,19 @@ func (s *store) mediaKey(k mediakeys.Key) (step func(), pass bool) {
 		if k == mediakeys.BrightnessDown {
 			delta = -delta
 		}
-		// A MacBook's own display keeps its keys: both change together.
-		return func() { s.stepBrightness(delta); s.adjusted(hudBrightness) }, s.hasBuiltin
+		// A MacBook keeps its own brightness keys while the external display follows.
+		return func() { s.each(func() { s.stepBrightness(delta) }); s.adjusted(hudBrightness) }, s.hasBuiltin
 	case mediakeys.VolumeUp, mediakeys.VolumeDown:
-		if !s.hasVolume || !s.soundToDisplay() {
+		if s.volumeKeyTarget() == nil || s.audioRoute() == display.OtherAudio {
 			return nil, false // the sound plays elsewhere, at macOS's volume
 		}
-		delta := float64(shortcutStep)
+		delta := s.prefs.volumeStep()
 		if k == mediakeys.VolumeDown {
 			delta = -delta
 		}
-		return func() { s.stepVolume(delta); s.adjusted(hudVolume) }, false
+		return func() { s.each(func() { s.stepVolume(delta) }); s.adjusted(hudVolume) }, false
 	case mediakeys.Mute:
-		if !s.hasVolume || !s.soundToDisplay() {
+		if s.volumeKeyTarget() == nil || s.audioRoute() == display.OtherAudio {
 			return nil, false
 		}
 		return func() { s.toggleMute(); s.adjusted(hudVolume) }, false
@@ -82,3 +83,20 @@ func (s *store) setMediaKeys(on bool) {
 
 // openAccessibility opens the Accessibility list in System Settings.
 func openAccessibility() { _ = mygo.Shell.OpenExternal(mediakeys.SettingsURL) }
+
+// volumeKeyTarget is the display whose volume the keys, the shortcuts and
+// the HUD go by: the one shown, or in sync one that has a volume when the
+// one shown has none.
+func (s *store) volumeKeyTarget() *output {
+	if s.hasVolume {
+		return s.output
+	}
+	if s.prefs.SyncDisplays {
+		for _, o := range s.outputs {
+			if o.hasVolume {
+				return o
+			}
+		}
+	}
+	return nil
+}

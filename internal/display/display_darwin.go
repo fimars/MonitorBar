@@ -3,9 +3,13 @@
 package display
 
 import (
+	"cmp"
 	"errors"
+	"fmt"
 	"os/exec"
+	"slices"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/ebitengine/purego"
@@ -16,8 +20,8 @@ import (
 const SettingsURL = "x-apple.systempreferences:com.apple.Displays-Settings.extension"
 
 type (
-	handle     = uint32  // CGDirectDisplayID
-	nativeMode = uintptr // CGDisplayModeRef, retained
+	handle     = uint32 // CGDirectDisplayID
+	nativeMode struct{}
 )
 
 var (
@@ -36,6 +40,7 @@ var (
 	cgBeginDisplayConfiguration        func(config *uintptr) int32
 	cgConfigureDisplayWithDisplayMode  func(config uintptr, id uint32, mode uintptr, options uintptr) int32
 	cgCompleteDisplayConfiguration     func(config uintptr, option uint32) int32
+	cgCancelDisplayConfiguration       func(config uintptr) int32
 	cgDisplayGammaTableCapacity        func(id uint32) uint32
 	cgGetDisplayTransferByTable        func(id, capacity uint32, r, g, b *float32, count *uint32) int32
 	cgSetDisplayTransferByTable        func(id, size uint32, r, g, b *float32) int32
@@ -47,7 +52,6 @@ var (
 
 	cfArrayGetCount           func(array uintptr) int
 	cfArrayGetValueAtIndex    func(array uintptr, i int) uintptr
-	cfRetain                  func(ref uintptr) uintptr
 	cfRelease                 func(ref uintptr)
 	cfDictionaryCreate        func(alloc uintptr, keys, values *uintptr, n int, keyCallbacks, valueCallbacks uintptr) uintptr
 	cfDictionaryGetValue      func(dict, key uintptr) uintptr
@@ -98,7 +102,8 @@ func load() {
 			&cgDisplayModeGetPixelWidth: "CGDisplayModeGetPixelWidth", &cgDisplayModeGetPixelHeight: "CGDisplayModeGetPixelHeight",
 			&cgDisplayModeGetRefreshRate: "CGDisplayModeGetRefreshRate", &cgDisplayModeIsUsableForDesktopGUI: "CGDisplayModeIsUsableForDesktopGUI",
 			&cgBeginDisplayConfiguration: "CGBeginDisplayConfiguration", &cgConfigureDisplayWithDisplayMode: "CGConfigureDisplayWithDisplayMode",
-			&cgCompleteDisplayConfiguration: "CGCompleteDisplayConfiguration", &cgDisplayGammaTableCapacity: "CGDisplayGammaTableCapacity",
+			&cgCompleteDisplayConfiguration: "CGCompleteDisplayConfiguration", &cgCancelDisplayConfiguration: "CGCancelDisplayConfiguration",
+			&cgDisplayGammaTableCapacity: "CGDisplayGammaTableCapacity",
 			&cgGetDisplayTransferByTable: "CGGetDisplayTransferByTable", &cgSetDisplayTransferByTable: "CGSetDisplayTransferByTable",
 			&cgDisplayRestoreColorSyncSettings: "CGDisplayRestoreColorSyncSettings", &cgEventSourceSecondsSinceLast: "CGEventSourceSecondsSinceLastEventType",
 			&cgDisplayVendorNumber: "CGDisplayVendorNumber", &cgDisplayModelNumber: "CGDisplayModelNumber",
@@ -108,7 +113,7 @@ func load() {
 		}
 		for fn, name := range map[any]string{
 			&cfArrayGetCount: "CFArrayGetCount", &cfArrayGetValueAtIndex: "CFArrayGetValueAtIndex",
-			&cfRetain: "CFRetain", &cfRelease: "CFRelease", &cfDictionaryCreate: "CFDictionaryCreate",
+			&cfRelease: "CFRelease", &cfDictionaryCreate: "CFDictionaryCreate",
 			&cfDictionaryGetValue: "CFDictionaryGetValue", &cfStringCreateWithCString: "CFStringCreateWithCString",
 			&cfStringGetCString: "CFStringGetCString", &cfGetTypeID: "CFGetTypeID", &cfStringGetTypeID: "CFStringGetTypeID",
 			&cfNumberGetValue: "CFNumberGetValue",
@@ -142,20 +147,43 @@ func symbolValue(lib uintptr, name string) uintptr {
 	return **(**uintptr)(unsafe.Pointer(&addr))
 }
 
-// Target returns the first external display, or the main one.
-func Target() Monitor {
+// Targets returns the external displays, the main one first, or the main
+// display alone when none is external.
+func Targets() []Monitor {
 	load()
 	var ids [16]uint32
 	var n uint32
 	cgGetActiveDisplayList(uint32(len(ids)), &ids[0], &n)
-	id := cgMainDisplayID()
+	main := cgMainDisplayID()
+	var external []uint32
 	for _, d := range ids[:n] {
 		if cgDisplayIsBuiltin(d) == 0 {
-			id = d
-			break
+			external = append(external, d)
 		}
 	}
-	return Monitor{Name: screenName(id), Connection: connection(), Builtin: cgDisplayIsBuiltin(id) != 0, handle: id}
+	slices.SortStableFunc(external, func(a, b uint32) int { return cmp.Compare(b2i(b == main), b2i(a == main)) })
+	if len(external) == 0 {
+		external = []uint32{main}
+	}
+	// IOKit tells one cable type for all: it is shown only when it can be
+	// only one display's.
+	cable := ""
+	if len(external) == 1 {
+		cable = connection()
+	}
+	ms := make([]Monitor, len(external))
+	for i, id := range external {
+		ms[i] = Monitor{Key: fmt.Sprintf("%x:%x:%x", cgDisplayVendorNumber(id), cgDisplayModelNumber(id), cgDisplaySerialNumber(id)),
+			Name: screenName(id), Connection: cable, Builtin: cgDisplayIsBuiltin(id) != 0, order: i, handle: id}
+	}
+	return uniqueKeys(ms)
+}
+
+func b2i(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 // screenName asks NSScreen for the display's localized name.
@@ -201,17 +229,19 @@ func connection() string {
 
 func (m Monitor) Modes() []Mode {
 	load()
-	array := cgDisplayCopyAllDisplayModes(m.handle, modeOptions)
-	if array == 0 {
-		return nil
-	}
-	defer cfRelease(array)
 	var modes []Mode
-	for i := range cfArrayGetCount(array) {
-		ref := cfArrayGetValueAtIndex(array, i)
-		if cgDisplayModeIsUsableForDesktopGUI(ref) {
-			modes = append(modes, newMode(cfRetain(ref)))
+	array := cgDisplayCopyAllDisplayModes(m.handle, modeOptions)
+	if array != 0 {
+		defer cfRelease(array)
+		for i := range cfArrayGetCount(array) {
+			ref := cfArrayGetValueAtIndex(array, i)
+			if cgDisplayModeIsUsableForDesktopGUI(ref) {
+				modes = append(modes, newMode(ref))
+			}
 		}
+	}
+	for _, hidden := range m.cgsModes() {
+		modes = append(modes, hidden.mode)
 	}
 	return dedupe(modes)
 }
@@ -219,7 +249,11 @@ func (m Monitor) Modes() []Mode {
 func (m Monitor) CurrentMode() (Mode, bool) {
 	load()
 	ref := cgDisplayCopyDisplayMode(m.handle)
-	return newMode(ref), ref != 0
+	if ref == 0 {
+		return Mode{}, false
+	}
+	defer cfRelease(ref)
+	return newMode(ref), true
 }
 
 func newMode(ref uintptr) Mode {
@@ -233,49 +267,111 @@ func newMode(ref uintptr) Mode {
 	return Mode{
 		Width: int(cgDisplayModeGetWidth(ref)), Height: int(cgDisplayModeGetHeight(ref)),
 		PixelWidth: int(cgDisplayModeGetPixelWidth(ref)), PixelHeight: int(cgDisplayModeGetPixelHeight(ref)),
-		RefreshRate: rate, native: ref,
+		RefreshRate: rate,
 	}
 }
 
 func (m Monitor) Apply(mode Mode) error {
 	load()
+	// Resolve afresh: native identifiers can change after a switch.
+	var ref uintptr
+	array := cgDisplayCopyAllDisplayModes(m.handle, modeOptions)
+	if array != 0 {
+		defer cfRelease(array)
+		for i := range cfArrayGetCount(array) {
+			candidate := cfArrayGetValueAtIndex(array, i)
+			if cgDisplayModeIsUsableForDesktopGUI(candidate) && newMode(candidate).ID() == mode.ID() {
+				ref = candidate
+				break
+			}
+		}
+	}
+	var hidden cgsMode
+	found := false
+	if ref == 0 {
+		for _, candidate := range m.cgsModes() {
+			if candidate.mode.ID() == mode.ID() {
+				hidden, found = candidate, true
+				break
+			}
+		}
+		if !found {
+			return errors.New("display: mode is no longer available")
+		}
+	}
 	var config uintptr
-	if cgBeginDisplayConfiguration(&config) != 0 {
-		return errors.New("display: cannot begin configuration")
+	if code := cgBeginDisplayConfiguration(&config); code != 0 {
+		return fmt.Errorf("display: begin configuration: %d", code)
 	}
-	cgConfigureDisplayWithDisplayMode(config, m.handle, mode.native, 0)
-	if cgCompleteDisplayConfiguration(config, 2 /* kCGConfigurePermanently */) != 0 {
-		return errors.New("display: the display refused the mode")
+	var code int32
+	if ref != 0 {
+		code = cgConfigureDisplayWithDisplayMode(config, m.handle, ref, 0)
+	} else {
+		code = cgsConfigureDisplayMode(config, m.handle, hidden.id)
 	}
-	return nil
+	if code != 0 {
+		cancel := cgCancelDisplayConfiguration(config)
+		return fmt.Errorf("display: configure mode: %d (cancel: %d)", code, cancel)
+	}
+	if code := cgCompleteDisplayConfiguration(config, 2 /* kCGConfigurePermanently */); code != 0 {
+		return fmt.Errorf("display: commit mode: %d", code)
+	}
+	deadline := time.NewTimer(3 * time.Second)
+	defer deadline.Stop()
+	tick := time.NewTicker(50 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		if current, ok := m.CurrentMode(); ok && current.ID() == mode.ID() {
+			return nil
+		}
+		select {
+		case <-deadline.C:
+			return errors.New("display: the mode did not take effect")
+		case <-tick.C:
+		}
+	}
 }
 
-var gammaBase [3][]float32 // the ColorSync curve, captured before the first change
+// gammaBase holds each display's ColorSync curve, captured for all at once
+// before the first change: capturing restores every display's curve.
+var gammaBase map[uint32][3][]float32
 
 // SetGamma dims and warms the picture through the gamma table. macOS resets
 // it when the app quits.
 func (m Monitor) SetGamma(brightness, warmth float64) error {
 	load()
-	if neutral(brightness, warmth) {
-		RestoreGamma()
-		return nil
-	}
-	if gammaBase[0] == nil {
+	if gammaBase == nil {
 		cgDisplayRestoreColorSyncSettings()
-		capacity := cgDisplayGammaTableCapacity(m.handle)
-		r, g, b := make([]float32, capacity), make([]float32, capacity), make([]float32, capacity)
+		gammaBase = map[uint32][3][]float32{}
+		var ids [16]uint32
 		var n uint32
-		cgGetDisplayTransferByTable(m.handle, capacity, &r[0], &g[0], &b[0], &n)
-		gammaBase = [3][]float32{r[:n], g[:n], b[:n]}
+		cgGetActiveDisplayList(uint32(len(ids)), &ids[0], &n)
+		for _, id := range ids[:n] {
+			capacity := cgDisplayGammaTableCapacity(id)
+			if capacity == 0 {
+				continue
+			}
+			r, g, b := make([]float32, capacity), make([]float32, capacity), make([]float32, capacity)
+			var count uint32
+			cgGetDisplayTransferByTable(id, capacity, &r[0], &g[0], &b[0], &count)
+			gammaBase[id] = [3][]float32{r[:count], g[:count], b[:count]}
+		}
 	}
-	if len(gammaBase[0]) == 0 {
+	base := gammaBase[m.handle]
+	if len(base[0]) == 0 {
+		if neutral(brightness, warmth) {
+			return nil
+		}
 		return errors.New("display: no gamma table")
 	}
 	gr, gg, gb := gains(brightness, warmth)
+	if neutral(brightness, warmth) {
+		gr, gg, gb = 1, 1, 1 // the display's own curve, leaving the others'
+	}
 	scaled := [3][]float32{}
 	for i, gain := range []float64{gr, gg, gb} {
-		scaled[i] = make([]float32, len(gammaBase[i]))
-		for j, v := range gammaBase[i] {
+		scaled[i] = make([]float32, len(base[i]))
+		for j, v := range base[i] {
 			scaled[i][j] = v * float32(gain)
 		}
 	}
@@ -285,14 +381,14 @@ func (m Monitor) SetGamma(brightness, warmth float64) error {
 	return nil
 }
 
-// RestoreGamma puts the ColorSync curves back.
+// RestoreGamma puts the ColorSync curves of every display back.
 func RestoreGamma() {
 	load()
 	cgDisplayRestoreColorSyncSettings()
 }
 
-// ResetGammaBase forgets the captured curve, after the displays changed.
-func ResetGammaBase() { gammaBase = [3][]float32{} }
+// ResetGammaBase forgets the captured curves, after the displays changed.
+func ResetGammaBase() { gammaBase = nil }
 
 func (m Monitor) Asleep() bool {
 	load()

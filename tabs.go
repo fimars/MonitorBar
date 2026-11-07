@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"math"
 	"runtime"
@@ -27,7 +28,7 @@ func (p *panel) overview(c *ui.Context) {
 			ui.Grid(c).Columns(4).Gap(6).Children(func() {
 				for _, src := range sources {
 					if chipText(c.Key(src.ID), src.Name, s.input == src.ID) {
-						s.selectInput(src)
+						s.each(func() { s.switchInput(src.ID) }) // the same input of each display in sync
 					}
 				}
 			})
@@ -46,11 +47,11 @@ func (p *panel) overview(c *ui.Context) {
 		}
 		if (sliderCard{key: "backlight", title: locales.Brightness(), caption: caption, icon: "sun",
 			value: &combined, lo: 0, hi: 100, step: 5}).show(c) {
-			s.setCombined(combined)
+			s.each(func() { s.setLevel(combined) })
 		}
-	} else if (sliderCard{key: "brightness", title: locales.Brightness(), caption: locales.BrightnessSoftware(), icon: "sun",
-		value: &s.prefs.SoftBrightness, lo: 20, hi: 100, step: 5}).show(c) {
-		s.applyGamma()
+	} else if level := s.soft; (sliderCard{key: "brightness", title: locales.Brightness(), caption: locales.BrightnessSoftware(), icon: "sun",
+		value: &level, lo: 20, hi: 100, step: 5}).show(c) {
+		s.each(func() { s.setLevel(level) })
 	}
 	if s.hasVolume {
 		p.volume(c)
@@ -112,8 +113,12 @@ func (p *panel) volume(c *ui.Context) {
 			ui.Text(c, locales.Volume()).FontSize(12).FontWeight(600).Grow(1)
 			ui.Text(c, fmt.Sprint(int(math.Round(s.volume)))).FontSize(20).FontWeight(600).FontFeatures("tnum")
 		})
-		if ui.Slider(c.Key("volume"), &s.volume, 0, 100).Label(locales.Volume()).Changed() {
-			s.setVolume(s.volume)
+		if volume := s.volume; ui.Slider(c.Key("volume"), &volume, 0, 100).Label(locales.Volume()).Changed() {
+			s.each(func() {
+				if s.hasVolume {
+					s.setVolume(volume)
+				}
+			})
 		}
 	})
 }
@@ -121,19 +126,55 @@ func (p *panel) volume(c *ui.Context) {
 func (p *panel) scenes(c *ui.Context) {
 	s := p.s
 	card(c, func() {
-		cardTitle(c, locales.Scenes(), "sparkles", locales.ScenesNote())
-		ui.Row(c).Gap(6).Children(func() {
-			for _, sc := range scenes {
-				e := chip(c.Key(sc.id), s.isActive(sc)).Grow(1).Height(50).Gap(5)
-				e.Children(func() {
-					icon(c, sc.icon).FontSize(14)
-					ui.Text(c, sc.label()).FontSize(10).FontWeight(500)
-				})
-				if e.Clicked() {
-					s.apply(sc)
+		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+			icon(c, "sparkles").FontSize(13)
+			ui.Text(c, locales.Scenes()).FontSize(12).FontWeight(600).Grow(1)
+			ui.Text(c, locales.ScenesNote()).FontSize(10).TextColor(muted)
+			if len(s.prefs.SavedScenes) < maxSavedScenes {
+				save := chip(c.Key("save-scene"), false).Size(22, 20).Label(locales.SceneSaveLabel()).Tooltip(locales.SceneSaveLabel())
+				save.Children(func() { icon(c, "plus").FontSize(10) })
+				if save.Clicked() {
+					s.saveScene()
 				}
 			}
 		})
+		ui.Grid(c).Columns(4).Gap(6).Children(func() {
+			for _, sc := range s.allScenes() {
+				e := chip(c.Key(sc.id), s.isActive(sc)).Height(50).Gap(5)
+				e.Children(func() {
+					icon(c, sc.icon).FontSize(14)
+					ui.Text(c, sc.label()).FontSize(10).FontWeight(500).SingleLine()
+				})
+				if e.Clicked() {
+					s.each(func() { s.apply(sc) })
+				}
+			}
+		})
+	})
+}
+
+// savedScenes renames and deletes the scenes the user saved.
+func (p *panel) savedScenes(c *ui.Context) {
+	s := p.s
+	card(c, func() {
+		cardTitle(c, locales.SavedScenes(), "star", locales.SavedScenesNote())
+		deleted := "" // deleted after the loop, which walks the slice
+		for i := range s.prefs.SavedScenes {
+			sc := &s.prefs.SavedScenes[i]
+			ui.Row(c.Key(sc.ID)).Gap(8).AlignItems(ui.Center).Children(func() {
+				if ui.TextInput(c.Key("name"), &sc.Name).Label(locales.SceneName()).Placeholder(locales.SceneUntitled()).Grow(1).Changed() {
+					s.dirty = true
+				}
+				del := chip(c.Key("delete"), false).Size(26, 22).Label(locales.SceneDelete(cmp.Or(sc.Name, locales.SceneUntitled())))
+				del.Children(func() { icon(c, "trash").FontSize(11) })
+				if del.Clicked() {
+					deleted = sc.ID
+				}
+			})
+		}
+		if deleted != "" {
+			s.deleteScene(deleted)
+		}
 	})
 }
 
@@ -142,18 +183,21 @@ func (p *panel) scenes(c *ui.Context) {
 func (p *panel) picture(c *ui.Context) {
 	s := p.s
 	p.scenes(c)
+	if len(s.prefs.SavedScenes) > 0 {
+		p.savedScenes(c)
+	}
 	if s.canFollow() {
 		p.followBuiltin(c)
 	}
 	p.autoSwitch(c)
-	if (sliderCard{key: "warmth", title: locales.Warmth(), caption: locales.WarmthNote(), icon: "thermometer",
-		value: &s.prefs.Warmth, lo: 0, hi: 100, step: 5, format: func(v float64) string {
+	if warmth := s.warmth; (sliderCard{key: "warmth", title: locales.Warmth(), caption: locales.WarmthNote(), icon: "thermometer",
+		value: &warmth, lo: 0, hi: 100, step: 5, format: func(v float64) string {
 			if v < 1 {
 				return locales.WarmthNeutral()
 			}
 			return fmt.Sprint(int(math.Round(v)))
 		}}).show(c) {
-		s.applyGamma()
+		s.each(func() { s.setWarmth(warmth) })
 	}
 	for i := range s.controls { // only what the monitor answers over DDC/CI
 		ctl := &s.controls[i]
@@ -170,7 +214,7 @@ func (p *panel) picture(c *ui.Context) {
 		})
 	})
 	if reset.Clicked() {
-		s.resetSoftware()
+		s.each(s.resetSoftware)
 	}
 	p.shortcuts(c)
 }
@@ -236,6 +280,15 @@ func (p *panel) shortcuts(c *ui.Context) {
 				s.dirty = true
 			}
 		})
+		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, locales.VolumeStep()).FontSize(11).Grow(1)
+			step := s.prefs.volumeStep()
+			if ui.Stepper(c.Key("volume-step"), &step, 1, 10, 1).Label(locales.VolumeStep()).Changed() {
+				s.prefs.VolumeStep = int(step)
+				s.dirty = true
+			}
+			ui.Text(c, fmt.Sprint(int(step))).FontSize(11)
+		})
 		if mediakeys.Supported {
 			p.mediaKeys(c)
 		}
@@ -300,8 +353,9 @@ func (p *panel) followBuiltin(c *ui.Context) {
 // times.
 func (p *panel) autoSwitch(c *ui.Context) {
 	s := p.s
-	labels := make([]string, len(scenes))
-	for i, sc := range scenes {
+	all := s.allScenes()
+	labels := make([]string, len(all))
+	for i, sc := range all {
 		labels[i] = sc.label()
 	}
 	card(c, func() {
@@ -324,9 +378,9 @@ func (p *panel) autoSwitch(c *ui.Context) {
 				}
 				ui.Spacer(c)
 				// The select shows the labels; the settings keep the scene's id.
-				chosen := sceneByID(*scene).label()
+				chosen := s.sceneByID(*scene).label()
 				if ui.Select(c.Key(key+"-scene"), &chosen, labels).Label(locales.AutoScene(label)).Width(96).Changed() {
-					*scene = scenes[slices.Index(labels, chosen)].id
+					*scene = all[slices.Index(labels, chosen)].id
 					s.autoChanged()
 				}
 			})
@@ -340,56 +394,168 @@ func (p *panel) autoSwitch(c *ui.Context) {
 // MARK: 分辨率
 
 func (p *panel) modes(c *ui.Context) {
-	s := p.s
-	rate := 60
-	if s.hasCurrent {
-		rate = s.current.RefreshRate
-	}
-	if s.link != nil { // only the HyperOS remote can switch the monitor's own mode
-		card(c, func() {
-			trailing := ""
-			if s.switchingTo != "" {
-				trailing = locales.CompetitiveSwitching()
-			}
-			cardTitle(c, locales.Competitive(), "sparkles", trailing)
-			on := s.competitive()
-			ui.Grid(c).Columns(2).Gap(6).Children(func() {
-				if chipText(c.Key("4k"), "4K 160Hz", !on) {
-					s.setCompetitive(false)
-				}
-				if chipText(c.Key("320"), "1080p 320Hz", on) {
-					s.setCompetitive(true)
-				}
-			})
-		})
-	}
-	if rates := display.RefreshRates(s.modes, s.current); len(rates) > 1 {
-		card(c, func() {
-			cardTitle(c, locales.RefreshRate(), "gauge", s.current.Title())
-			ui.Grid(c).Columns(4).Gap(6).Children(func() {
-				for _, m := range rates {
-					if chipText(c.Key(m.ID()), fmt.Sprintf("%d Hz", m.RefreshRate), m.RefreshRate == rate) {
-						s.applyMode(m)
+	ui.Column(c.Key(p.s.monitor.Key)).Gap(10).Children(func() {
+		s := p.s
+		rate := 60
+		if s.hasCurrent {
+			rate = s.current.RefreshRate
+			card(c.Key("current-mode"), func() {
+				cardTitle(c, locales.CurrentMode(), "display", fmt.Sprintf("%d Hz", rate))
+				ui.Row(c).Gap(8).Children(func() {
+					ui.Text(c, s.current.Title()).FontSize(22).FontWeight(600).FontFeatures("tnum").Grow(1)
+					if s.current.HiDPI() {
+						ui.Text(c, "HiDPI").FontSize(11).TextColor(accent)
 					}
-				}
+				})
 			})
-		})
-	}
-	p.resolutions(c, locales.ModesHiDPI(), "zoom", display.Resolutions(s.modes, true, rate))
-	p.resolutions(c, locales.ModesStandard(), "layers", display.Resolutions(s.modes, false, rate))
+		}
+		if s.link != nil { // only the HyperOS remote can switch the monitor's own mode
+			card(c, func() {
+				trailing := ""
+				if s.switchingTo != "" {
+					trailing = locales.CompetitiveSwitching()
+				}
+				cardTitle(c, locales.Competitive(), "sparkles", trailing)
+				on := s.competitive()
+				ui.Grid(c).Columns(2).Gap(6).Children(func() {
+					if chipText(c.Key("4k"), "4K 160Hz", !on) {
+						s.setCompetitive(false)
+					}
+					if chipText(c.Key("320"), "1080p 320Hz", on) {
+						s.setCompetitive(true)
+					}
+				})
+			})
+		}
+		if rates := display.RefreshRates(s.modes, s.current); len(rates) > 1 {
+			card(c, func() {
+				cardTitle(c, locales.RefreshRate(), "gauge", s.current.Title())
+				ui.Grid(c).Columns(4).Gap(6).Disabled(s.configuringDisplay != nil).Children(func() {
+					for _, m := range rates {
+						if chipText(c.Key(m.ID()), fmt.Sprintf("%d Hz", m.RefreshRate), m.RefreshRate == rate) && s.configuringDisplay == nil {
+							s.applyMode(m)
+						}
+					}
+				})
+			})
+		}
+		p.resolutions(c, locales.ModesHiDPI(), "zoom", display.Resolutions(s.modes, true, rate), &s.hiDPIModesOpen)
+		p.resolutions(c, locales.ModesStandard(), "layers", display.Resolutions(s.modes, false, rate), &s.standardModesOpen)
+		if runtime.GOOS == "darwin" {
+			e := ui.ButtonBase(c.Key("advanced-modes")).Height(44).PaddingX(12).Gap(6).Radius(12).
+				Background(cardFill).Border(0.7, cardStroke).Cursor(ui.CursorPointer).
+				Label(locales.ModesAdvanced()).Role(ui.RoleDisclosure).Expanded(s.advancedOpen)
+			if e.Hovered() || e.Pressed() {
+				e.Background(ui.RGBA(255, 255, 255, 0.11))
+			}
+			if e.Clicked() {
+				s.advancedOpen = !s.advancedOpen
+				e.Expanded(s.advancedOpen)
+			}
+			e.Children(func() {
+				icon(c, "sliders").FontSize(13)
+				ui.Text(c, locales.ModesAdvanced()).FontSize(12).FontWeight(600).Grow(1)
+				chevron := "chevronDown"
+				if s.advancedOpen {
+					chevron = "chevronUp"
+				}
+				icon(c, chevron).FontSize(11).TextColor(muted)
+			})
+			if s.advancedOpen {
+				p.hidpi(c, rate)
+			}
+		}
+	})
 }
 
-func (p *panel) resolutions(c *ui.Context, title, iconName string, modes []display.Mode) {
+func (p *panel) hidpi(c *ui.Context, rate int) {
+	s := p.s
+	w, h := s.monitor.NativeSize(s.modes, s.current)
+	presets := display.RecommendedHiDPI(w, h)
+	if s.monitor.Builtin {
+		presets = nil
+	}
+	if len(presets) == 0 && !s.hasHiDPIOverride {
+		return
+	}
+	card(c.Key("recommended"), func() {
+		cardTitle(c, locales.HiDPIRecommended(), "sparkles", "")
+		labels := map[display.Resolution]string{
+			{Width: 2560, Height: 1440}: locales.HiDPISpace(),
+			{Width: 2304, Height: 1296}: locales.HiDPIComfort(),
+			{Width: 2496, Height: 1404}: locales.HiDPINearNative(),
+		}
+		missing := false
+		ui.Column(c).Children(func() {
+			for _, preset := range presets {
+				mode, available := preset.HiDPIMode(s.modes, rate)
+				missing = missing || !available
+				selected := available && s.hasCurrent && s.current.ID() == mode.ID()
+				row := ui.ButtonBase(c.Key(preset.Title())).Label(preset.Title()).Disabled(!available || s.configuringDisplay != nil).
+					Height(44).PaddingX(9).Gap(8).Radius(8).Cursor(ui.CursorPointer)
+				if selected {
+					row.Background(accent.Alpha(0.14))
+				} else if row.Hovered() {
+					row.Background(ui.RGBA(255, 255, 255, 0.05))
+				}
+				row.Children(func() {
+					ui.Column(c).Grow(1).Gap(3).Children(func() {
+						title := ui.Text(c, preset.Title()).FontSize(12).FontWeight(500).FontFeatures("tnum")
+						if selected {
+							title.FontWeight(600)
+						}
+						ui.Text(c, labels[preset]).FontSize(10).TextColor(muted)
+					})
+					caption := locales.HiDPINotAvailable()
+					if available {
+						caption = fmt.Sprintf("%d Hz", mode.RefreshRate)
+					}
+					ui.Text(c, caption).FontSize(10).TextColor(muted)
+					check := icon(c, "check").FontSize(10).TextColor(accent)
+					if !selected {
+						check.Opacity(0)
+					}
+				})
+				if row.Clicked() && available && !selected && s.configuringDisplay == nil {
+					s.applyMode(mode)
+				}
+			}
+		})
+		if missing || s.hasHiDPIOverride {
+			ui.Column(c).Gap(6).Padding(8, 0, 0).BorderWidth(0.7, 0, 0, 0).BorderColor(cardStroke).Children(func() {
+				if missing {
+					ui.Text(c, locales.HiDPIInstallNote()).Width(panelWidth - 50).FontSize(10).TextColor(muted)
+				}
+				ui.Text(c, locales.HiDPIRecoveryNote()).Width(panelWidth - 50).FontSize(10).TextColor(muted)
+				ui.Column(c).Gap(6).Disabled(s.configuringDisplay != nil).Children(func() {
+					if missing && chipText(c.Key("install-hidpi"), locales.HiDPIInstall(), false) && s.configuringDisplay == nil {
+						s.configureHiDPI(false)
+					}
+					if s.hasHiDPIOverride && chipText(c.Key("restore-hidpi"), locales.HiDPIRestore(), false) && s.configuringDisplay == nil {
+						s.configureHiDPI(true)
+					}
+				})
+			})
+		}
+	})
+}
+
+func (p *panel) resolutions(c *ui.Context, title, iconName string, modes []display.Mode, open *bool) {
 	s := p.s
 	if len(modes) == 0 {
 		return
 	}
 	card(c.Key(iconName), func() {
 		cardTitle(c, title, iconName, locales.ModesCount(len(modes)))
-		ui.Column(c).Gap(4).Children(func() {
-			for _, m := range modes {
+		visible := modes
+		if !*open {
+			visible = modes[:min(3, len(modes))]
+		}
+		ui.Column(c).Children(func() {
+			for _, m := range visible {
 				selected := s.hasCurrent && m.SizeKey() == s.current.SizeKey()
-				row := ui.Row(c.Key(m.ID())).Height(28).PaddingX(9).Gap(8).Radius(8).Cursor(ui.CursorPointer)
+				row := ui.ButtonBase(c.Key(m.ID())).Disabled(s.configuringDisplay != nil).Height(32).PaddingX(9).Gap(8).Radius(8).Cursor(ui.CursorPointer).
+					Label(m.Title())
 				if selected {
 					row.Background(accent.Alpha(0.14))
 				} else if row.Hovered() {
@@ -410,11 +576,31 @@ func (p *panel) resolutions(c *ui.Context, title, iconName string, modes []displ
 						check.Opacity(0)
 					}
 				})
-				if row.Clicked() {
+				if row.Clicked() && !selected && s.configuringDisplay == nil {
 					s.applyMode(m)
 				}
 			}
 		})
+		if len(modes) > 3 {
+			label, chevron := locales.ModesShowMore(len(modes)-3), "chevronDown"
+			if *open {
+				label, chevron = locales.ModesShowLess(), "chevronUp"
+			}
+			e := ui.ButtonBase(c.Key("more")).Height(28).PaddingX(9).Gap(8).Radius(8).
+				Label(label).Role(ui.RoleDisclosure).Expanded(*open).Cursor(ui.CursorPointer).TextColor(muted)
+			if e.Hovered() || e.Pressed() {
+				e.Background(ui.RGBA(255, 255, 255, 0.05))
+			}
+			e.Children(func() {
+				ui.Text(c, label).FontSize(11).Grow(1)
+				icon(c, chevron).FontSize(10)
+			})
+			if e.Clicked() {
+				*open = !*open
+				e.Expanded(*open)
+				c.Invalidate()
+			}
+		}
 	})
 }
 

@@ -18,9 +18,18 @@ import (
 	"time"
 
 	"github.com/egoist/mygo"
+
+	"github.com/binaryify/MonitorBar/internal/display"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--hidpi-helper" {
+		if err := display.RunHiDPIHelper(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if slices.Contains(os.Args[1:], "--probe") {
 		probe()
 		return

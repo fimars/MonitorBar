@@ -3,6 +3,21 @@
   "trayOpen": "Open MonitorBar",
   "menuMore": "More",
   "menuDetect": "Detect Displays Again",
+  "menuLink": "LAN Remote",
+  "menuLinkMonitor": "{name} ({host})",
+  "@menuLinkMonitor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "menuLinkNone": "None",
+  "syncDisplays": "Sync",
+  "syncDisplaysNote": "Change the brightness, color temperature, scenes, volume and input of every display at once",
   "menuDisplaySettings": "Open Display Settings…",
   "menuLaunchAtLogin": "Launch at Login",
   "menuCheckUpdates": "Check for Updates",
@@ -71,6 +86,27 @@
   "sceneReading": "Reading",
   "sceneMovie": "Movie",
   "sceneNight": "Night",
+  "sceneSaveLabel": "Save the current brightness and color temperature as a scene",
+  "sceneCustomName": "Scene {n}",
+  "@sceneCustomName": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "savedScenes": "My Scenes",
+  "savedScenesNote": "Click a name to rename it",
+  "sceneUntitled": "Untitled",
+  "sceneName": "Scene name",
+  "sceneDelete": "Delete {name}",
+  "@sceneDelete": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "warmth": "Color Temperature",
   "warmthNote": "Warmer to the right, with less blue light",
   "warmthNeutral": "Neutral",
@@ -119,6 +155,7 @@
     }
   },
   "showHud": "Show the level as keys change it",
+  "volumeStep": "Volume step",
   "mediaKeys": "Use the keyboard's brightness and volume keys",
   "mediaKeysNote": "Advanced: F1/F2 without fn set the external brightness, and F10/F11/F12 mute it and set its volume while the sound plays on it. Needs the Accessibility permission.",
   "mediaKeysDenied": "No Accessibility permission. Turn MonitorBar on in the list; if it's on and still doesn't work after an update, remove it with − and add it again.",
@@ -194,6 +231,15 @@
       }
     }
   },
+  "modesShowMore": "{count, plural, one {Show # more mode} other {Show # more modes}}",
+  "@modesShowMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "modesShowLess": "Show less",
   "modeRendered": "Rendered at {width, number, ::group-off}×{height, number, ::group-off}",
   "@modeRendered": {
     "placeholders": {
@@ -274,6 +320,7 @@
     }
   },
   "noticeUpdateFailed": "The update failed. Try again later, or download it from GitHub",
+  "noticeModeApplying": "Switching display mode…",
   "noticeModeRejected": "Couldn't switch: the display refused the mode",
   "noticeModeSwitched": "Switched to {mode} · {rate} Hz",
   "@noticeModeSwitched": {
@@ -299,6 +346,27 @@
   "@noticeLoginFailed": {
     "placeholders": {
       "error": {
+        "type": "String"
+      }
+    }
+  },
+  "modesAdvanced": "Advanced Settings",
+  "hiDPIRecommended": "Recommended HiDPI",
+  "hiDPISpace": "Recommended · more desktop space",
+  "hiDPIComfort": "Larger text",
+  "hiDPINearNative": "Alternative size",
+  "hiDPINotAvailable": "Not available yet",
+  "hiDPIInstall": "Add missing sizes…",
+  "hiDPIInstallNote": "Requires administrator authorization to write a display Override file. Displays of this model share the configuration. Reconnect the display or restart, then check which sizes macOS actually offers.",
+  "hiDPIRestore": "Restore original display configuration…",
+  "hiDPIAuthorizing": "Waiting for administrator authorization…",
+  "hiDPIInstalled": "Override file saved. Reconnect the display or restart, then check for available HiDPI sizes. macOS may not offer every requested size.",
+  "hiDPIRestored": "Original configuration restored. Reconnect the display or restart to apply.",
+  "hiDPIRecoveryNote": "Displays of this model share the configuration. MonitorBar keeps the original file in its managed backup. Restore requires administrator authorization and restores the original bytes, or removes the Override if none existed. Later changes by another app block restoration and keep the backup. If anything looks wrong, choose Restore, then reconnect or restart.",
+  "hiDPIConfigFailed": "Configuration reported an error. Check the current configuration before retrying. Any existing backup is kept for recovery. Details: {reason}",
+  "@hiDPIConfigFailed": {
+    "placeholders": {
+      "reason": {
         "type": "String"
       }
     }
