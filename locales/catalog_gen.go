@@ -1400,3 +1400,143 @@ func NoticeLoginFailed(error string) string { return In(i18n.Locale()).NoticeLog
 func (msgs Messages) NoticeLoginFailed(error string) string {
 	return Catalog.Format(msgs.locale, "noticeLoginFailed", map[string]any{"error": error})
 }
+
+// ModesAdvanced says "Advanced Settings"
+// in the language the app shows.
+func ModesAdvanced() string { return In(i18n.Locale()).ModesAdvanced() }
+
+// ModesAdvanced says "Advanced Settings"
+// in the language of msgs.
+func (msgs Messages) ModesAdvanced() string {
+	return Catalog.Format(msgs.locale, "modesAdvanced", nil)
+}
+
+// HiDPIRecommended says "Recommended HiDPI"
+// in the language the app shows.
+func HiDPIRecommended() string { return In(i18n.Locale()).HiDPIRecommended() }
+
+// HiDPIRecommended says "Recommended HiDPI"
+// in the language of msgs.
+func (msgs Messages) HiDPIRecommended() string {
+	return Catalog.Format(msgs.locale, "hiDPIRecommended", nil)
+}
+
+// HiDPISpace says "Recommended · more desktop space"
+// in the language the app shows.
+func HiDPISpace() string { return In(i18n.Locale()).HiDPISpace() }
+
+// HiDPISpace says "Recommended · more desktop space"
+// in the language of msgs.
+func (msgs Messages) HiDPISpace() string {
+	return Catalog.Format(msgs.locale, "hiDPISpace", nil)
+}
+
+// HiDPIComfort says "Larger text"
+// in the language the app shows.
+func HiDPIComfort() string { return In(i18n.Locale()).HiDPIComfort() }
+
+// HiDPIComfort says "Larger text"
+// in the language of msgs.
+func (msgs Messages) HiDPIComfort() string {
+	return Catalog.Format(msgs.locale, "hiDPIComfort", nil)
+}
+
+// HiDPINearNative says "Alternative size"
+// in the language the app shows.
+func HiDPINearNative() string { return In(i18n.Locale()).HiDPINearNative() }
+
+// HiDPINearNative says "Alternative size"
+// in the language of msgs.
+func (msgs Messages) HiDPINearNative() string {
+	return Catalog.Format(msgs.locale, "hiDPINearNative", nil)
+}
+
+// HiDPINotAvailable says "Not available yet"
+// in the language the app shows.
+func HiDPINotAvailable() string { return In(i18n.Locale()).HiDPINotAvailable() }
+
+// HiDPINotAvailable says "Not available yet"
+// in the language of msgs.
+func (msgs Messages) HiDPINotAvailable() string {
+	return Catalog.Format(msgs.locale, "hiDPINotAvailable", nil)
+}
+
+// HiDPIInstall says "Add missing sizes…"
+// in the language the app shows.
+func HiDPIInstall() string { return In(i18n.Locale()).HiDPIInstall() }
+
+// HiDPIInstall says "Add missing sizes…"
+// in the language of msgs.
+func (msgs Messages) HiDPIInstall() string {
+	return Catalog.Format(msgs.locale, "hiDPIInstall", nil)
+}
+
+// HiDPIInstallNote says "Requires administrator authorization to write a display Override file. Displays of this model share the configuration…"
+// in the language the app shows.
+func HiDPIInstallNote() string { return In(i18n.Locale()).HiDPIInstallNote() }
+
+// HiDPIInstallNote says "Requires administrator authorization to write a display Override file. Displays of this model share the configuration…"
+// in the language of msgs.
+func (msgs Messages) HiDPIInstallNote() string {
+	return Catalog.Format(msgs.locale, "hiDPIInstallNote", nil)
+}
+
+// HiDPIRestore says "Restore original display configuration…"
+// in the language the app shows.
+func HiDPIRestore() string { return In(i18n.Locale()).HiDPIRestore() }
+
+// HiDPIRestore says "Restore original display configuration…"
+// in the language of msgs.
+func (msgs Messages) HiDPIRestore() string {
+	return Catalog.Format(msgs.locale, "hiDPIRestore", nil)
+}
+
+// HiDPIAuthorizing says "Waiting for administrator authorization…"
+// in the language the app shows.
+func HiDPIAuthorizing() string { return In(i18n.Locale()).HiDPIAuthorizing() }
+
+// HiDPIAuthorizing says "Waiting for administrator authorization…"
+// in the language of msgs.
+func (msgs Messages) HiDPIAuthorizing() string {
+	return Catalog.Format(msgs.locale, "hiDPIAuthorizing", nil)
+}
+
+// HiDPIInstalled says "Override file saved. Reconnect the display or restart, then check for available HiDPI sizes. macOS may not offer ever…"
+// in the language the app shows.
+func HiDPIInstalled() string { return In(i18n.Locale()).HiDPIInstalled() }
+
+// HiDPIInstalled says "Override file saved. Reconnect the display or restart, then check for available HiDPI sizes. macOS may not offer ever…"
+// in the language of msgs.
+func (msgs Messages) HiDPIInstalled() string {
+	return Catalog.Format(msgs.locale, "hiDPIInstalled", nil)
+}
+
+// HiDPIRestored says "Original configuration restored. Reconnect the display or restart to apply."
+// in the language the app shows.
+func HiDPIRestored() string { return In(i18n.Locale()).HiDPIRestored() }
+
+// HiDPIRestored says "Original configuration restored. Reconnect the display or restart to apply."
+// in the language of msgs.
+func (msgs Messages) HiDPIRestored() string {
+	return Catalog.Format(msgs.locale, "hiDPIRestored", nil)
+}
+
+// HiDPIRecoveryNote says "Displays of this model share the configuration. MonitorBar keeps the original file in its managed backup. Restore req…"
+// in the language the app shows.
+func HiDPIRecoveryNote() string { return In(i18n.Locale()).HiDPIRecoveryNote() }
+
+// HiDPIRecoveryNote says "Displays of this model share the configuration. MonitorBar keeps the original file in its managed backup. Restore req…"
+// in the language of msgs.
+func (msgs Messages) HiDPIRecoveryNote() string {
+	return Catalog.Format(msgs.locale, "hiDPIRecoveryNote", nil)
+}
+
+// HiDPIConfigFailed says "Configuration reported an error. Check the current configuration before retrying. Any existing backup is kept for rec…"
+// in the language the app shows.
+func HiDPIConfigFailed(reason string) string { return In(i18n.Locale()).HiDPIConfigFailed(reason) }
+
+// HiDPIConfigFailed says "Configuration reported an error. Check the current configuration before retrying. Any existing backup is kept for rec…"
+// in the language of msgs.
+func (msgs Messages) HiDPIConfigFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "hiDPIConfigFailed", map[string]any{"reason": reason})
+}

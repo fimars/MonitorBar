@@ -66,7 +66,7 @@ func TestResolutionListsKeepHighestThree(t *testing.T) {
 	if !p.s.standardModesOpen || p.s.hiDPIModesOpen || !tt.HasText("1280 × 720") || tt.HasText("渲染 2560×1440") {
 		t.Fatal("the standard list must extend independently")
 	}
-	p.s.modeSwitch = p.s.output
+	p.s.configuringDisplay = p.s.output
 	tt.Frame()
 	if err := tt.Click("3360 × 1890"); err != nil {
 		t.Fatal(err)
@@ -137,7 +137,7 @@ func TestDisplaysKeepIndependentResolutionLists(t *testing.T) {
 	if !a.hiDPIModesOpen || a.standardModesOpen || !tt.HasText("渲染 2560×1440") {
 		t.Fatal("display A lost its expansion")
 	}
-	s.modeSwitch = a
+	s.configuringDisplay = a
 	s.prefs.SyncDisplays = true
 	s.showDisplay(b)
 	tt.Frame()
@@ -146,7 +146,7 @@ func TestDisplaysKeepIndependentResolutionLists(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if s.modeSwitch != a || s.notice != "" {
+	if s.configuringDisplay != a || s.notice != "" {
 		t.Fatal("another display started a concurrent mode switch")
 	}
 }
@@ -158,7 +158,7 @@ func TestModeCompletionBelongsToItsDisplay(t *testing.T) {
 			s := p.s
 			a, b := s.outputs[0], s.outputs[1]
 			monitor, want := a.monitor, a.current
-			s.modeSwitch, s.notice = a, "pending"
+			s.configuringDisplay, s.notice = a, "pending"
 			var err error
 			switch name {
 			case "failed":
@@ -180,7 +180,7 @@ func TestModeCompletionBelongsToItsDisplay(t *testing.T) {
 			}
 			selected, notice := s.output, s.notice
 			s.modeApplied(a, monitor, want, err)
-			if s.modeSwitch != nil || s.output != selected {
+			if s.configuringDisplay != nil || s.output != selected {
 				t.Fatal("completion did not clear its operation or changed selection")
 			}
 			switch name {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"path/filepath"
 	"slices"
@@ -115,8 +116,8 @@ type store struct {
 	// The display the panel shows and its fields are of: on and every
 	// make another one it for a while, so actions work on each the same.
 	*output
-	outputs    []*output // every display managed, the main one first
-	modeSwitch *output
+	outputs            []*output // every display managed, the main one first
+	configuringDisplay *output
 
 	prefs    *settings
 	tracker  *usage.Tracker
@@ -166,6 +167,8 @@ type output struct {
 	switchingTo string // the mode the LAN remote is switching the monitor to
 
 	hiDPIModesOpen, standardModesOpen bool
+	advancedOpen                      bool
+	hasHiDPIOverride                  bool
 
 	// The software picture, through the gamma table.
 	soft   float64 // gamma %, 20...100
@@ -1036,12 +1039,12 @@ func (s *store) installUpdate() {
 // MARK: Display modes
 
 func (s *store) applyMode(m display.Mode) {
-	if s.modeSwitch != nil {
+	if s.configuringDisplay != nil {
 		return
 	}
 	o := s.output
 	monitor := o.monitor
-	s.modeSwitch, s.notice = o, locales.NoticeModeApplying()
+	s.configuringDisplay, s.notice = o, locales.NoticeModeApplying()
 	go func() {
 		err := monitor.Apply(m)
 		s.post(func() {
@@ -1052,7 +1055,7 @@ func (s *store) applyMode(m display.Mode) {
 }
 
 func (s *store) modeApplied(o *output, monitor display.Monitor, m display.Mode, err error) {
-	s.modeSwitch = nil
+	s.configuringDisplay = nil
 	if s.output != o || !slices.Contains(s.outputs, o) || o.monitor != monitor {
 		return
 	}
@@ -1060,6 +1063,48 @@ func (s *store) modeApplied(o *output, monitor display.Monitor, m display.Mode, 
 		s.notice = locales.NoticeModeRejected()
 	} else {
 		s.notice = locales.NoticeModeSwitched(m.Title(), m.RefreshRate)
+	}
+}
+
+func (s *store) configureHiDPI(remove bool) {
+	if s.configuringDisplay != nil {
+		return
+	}
+	o := s.output
+	monitor := o.monitor
+	w, h := monitor.NativeSize(o.modes, o.current)
+	if remove {
+		if !o.hasHiDPIOverride {
+			return
+		}
+	} else if monitor.Builtin || len(display.RecommendedHiDPI(w, h)) == 0 {
+		return
+	}
+	s.configuringDisplay, s.notice = o, locales.HiDPIAuthorizing()
+	go func() {
+		err := monitor.ConfigureHiDPIOverride(remove, w, h)
+		s.post(func() {
+			s.refreshDisplay()
+			s.hiDPIConfigured(o, monitor, remove, err)
+		})
+	}()
+}
+
+func (s *store) hiDPIConfigured(o *output, monitor display.Monitor, remove bool, err error) {
+	s.configuringDisplay = nil
+	if err != nil {
+		log.Printf("configure HiDPI: %v", err)
+	}
+	if s.output != o || !slices.Contains(s.outputs, o) || o.monitor != monitor {
+		return
+	}
+	switch {
+	case err != nil:
+		s.notice = locales.HiDPIConfigFailed(err.Error())
+	case remove:
+		s.notice = locales.HiDPIRestored()
+	default:
+		s.notice = locales.HiDPIInstalled()
 	}
 }
 
@@ -1120,6 +1165,7 @@ func (s *store) refreshDisplay() {
 		}
 		o.monitor, o.modes = m, m.Modes()
 		o.current, o.hasCurrent = m.CurrentMode()
+		o.hasHiDPIOverride = m.HasHiDPIOverride()
 		outputs = append(outputs, o)
 	}
 	for _, o := range s.outputs {

@@ -134,5 +134,26 @@
   "noticeModeSwitched": "已切换到 {mode} · {rate} Hz",
   "noticeSwitchFailed": "切换失败：显示器没有响应",
   "noticeSwitching": "显示器正在切换到 {mode}，屏幕会黑几秒",
-  "noticeLoginFailed": "登录项设置失败：{error}"
+  "noticeLoginFailed": "登录项设置失败：{error}",
+  "modesAdvanced": "高级设置",
+  "hiDPIRecommended": "推荐 HiDPI",
+  "hiDPISpace": "推荐 · 更多桌面空间",
+  "hiDPIComfort": "较大文字 · 阅读舒适",
+  "hiDPINearNative": "备选尺寸",
+  "hiDPINotAvailable": "系统尚未提供",
+  "hiDPIInstall": "添加缺失档位…",
+  "hiDPIInstallNote": "需要管理员授权以写入显示器 Override 文件。同型号显示器共用此配置。重新连接显示器或重启后，请检查 macOS 实际提供的档位。",
+  "hiDPIRestore": "恢复原显示器配置…",
+  "hiDPIAuthorizing": "正在等待管理员授权…",
+  "hiDPIInstalled": "Override 文件已保存。重新连接显示器或重启后，请检查可用的 HiDPI 档位。macOS 不一定提供所有请求的尺寸。",
+  "hiDPIRestored": "已恢复原配置，重新连接显示器或重启后生效。",
+  "hiDPIRecoveryNote": "同型号显示器共用此配置。MonitorBar 在托管备份中保留原文件。恢复需要管理员授权，会还原原始字节；若原来没有文件，则删除 Override。其他应用后续修改过文件时，恢复会被阻止并保留备份。若显示异常，请选择恢复，再重新连接或重启。",
+  "hiDPIConfigFailed": "配置报告错误。重试前请检查当前配置，已有备份会保留以供恢复。详情：{reason}",
+  "@hiDPIConfigFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  }
 }

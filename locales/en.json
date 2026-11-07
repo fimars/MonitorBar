@@ -349,5 +349,26 @@
         "type": "String"
       }
     }
+  },
+  "modesAdvanced": "Advanced Settings",
+  "hiDPIRecommended": "Recommended HiDPI",
+  "hiDPISpace": "Recommended · more desktop space",
+  "hiDPIComfort": "Larger text",
+  "hiDPINearNative": "Alternative size",
+  "hiDPINotAvailable": "Not available yet",
+  "hiDPIInstall": "Add missing sizes…",
+  "hiDPIInstallNote": "Requires administrator authorization to write a display Override file. Displays of this model share the configuration. Reconnect the display or restart, then check which sizes macOS actually offers.",
+  "hiDPIRestore": "Restore original display configuration…",
+  "hiDPIAuthorizing": "Waiting for administrator authorization…",
+  "hiDPIInstalled": "Override file saved. Reconnect the display or restart, then check for available HiDPI sizes. macOS may not offer every requested size.",
+  "hiDPIRestored": "Original configuration restored. Reconnect the display or restart to apply.",
+  "hiDPIRecoveryNote": "Displays of this model share the configuration. MonitorBar keeps the original file in its managed backup. Restore requires administrator authorization and restores the original bytes, or removes the Override if none existed. Later changes by another app block restoration and keep the backup. If anything looks wrong, choose Restore, then reconnect or restart.",
+  "hiDPIConfigFailed": "Configuration reported an error. Check the current configuration before retrying. Any existing backup is kept for recovery. Details: {reason}",
+  "@hiDPIConfigFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
   }
 }
